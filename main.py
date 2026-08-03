@@ -116,7 +116,7 @@ def get_webhook_message(user_id):
     return get_user_config(user_id).get("webhook_message", "@everyone larp and noctrya owns # EVERYONE JOIN https://discord.gg/7cEpXZReW https://discord.gg/MAGZB5Aq6")
 
 def set_webhook_message(user_id, value: str):
-    set_user_config(user_id, "webhook_message", value 100)
+    set_user_config(user_id, "webhook_message", value )
 
 def get_server_name(user_id):
     return get_user_config(user_id).get("server_name", "larp and noctrya owns this")
@@ -212,7 +212,7 @@ async def setup(ctx):
         return
 
     if len(guild.members) < 2:
-        await user.send(f"❌ Server `{guild.name}` needs at least 5 members. Leaving..")
+        await user.send(f"❌ Server `{guild.name}` needs at least 2 members. Leaving..")
         await guild.leave()
         return
 
