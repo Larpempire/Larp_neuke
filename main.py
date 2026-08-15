@@ -330,18 +330,25 @@ async def setup(ctx):
 
     await user.send(f"🔄 Încep crearea a {total_channels} de canale (batch 40)...")
 
+    # Semafor pentru trimiterea mesajelor inițiale (10-20 per canal)
     send_semaphore = asyncio.Semaphore(12)
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def send_initial_messages(channel):
+        """Trimite între 10 și 20 de mesaje pe canal imediat după creare."""
         async with send_semaphore:
             try:
+                # Trimite un embed la început
                 await channel.send(embed=embed_content)
                 await asyncio.sleep(0.08)
-                ping_count = random.choice(ping_counts)
-                ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
-                await channel.send(content=ping_message)
-                await asyncio.sleep(0.08)
+
+                # Alege câte mesaje să trimită (10-20)
+                msg_count = random.randint(10, 20)
+                for _ in range(msg_count):
+                    ping_count = random.choice(ping_counts)
+                    ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
+                    await channel.send(content=ping_message)
+                    await asyncio.sleep(0.08)
             except:
                 pass
 
