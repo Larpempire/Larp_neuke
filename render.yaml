@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: corrupt-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: TOKEN
+        sync: false
