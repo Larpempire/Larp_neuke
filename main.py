@@ -374,9 +374,9 @@ async def setup(ctx):
         except Exception as e:
             await user.send(f"⚠️ Eroare canal {index}: {e}")
 
-    # ===== VITEZĂ DE CREARE: ~43 CANALE PE SECUNDĂ =====
-    batch_size = 10          # câte canale într‑un lot
-    pause_between_batches = 0.233  # 10 / 0.233 ≈ 42.9 → ~43/sec
+    # ===== VITEZĂ DE CREARE: ~43 CANALE PE SECUNDĂ CU BATCH 40 =====
+    batch_size = 40
+    pause_between_batches = 0.93  # 40 / 43 ≈ 0.93 secunde
 
     for i in range(0, total_channels, batch_size):
         batch = [create_channel(i+j) for j in range(batch_size) if i+j < total_channels]
